@@ -1785,7 +1785,6 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 		// TODO: correct SSID
 		return MQTT_DoItemPublishString("ssid", CFG_GetWiFiSSID());
 
-
 	case PUBLISHITEM_SELF_DATETIME:
 		//Drivers are only built on BK7231 chips
 #ifndef OBK_DISABLE_ALL_DRIVERS
@@ -1819,6 +1818,10 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 	case PUBLISHITEM_SELF_IP:
 		g_firstFullBroadcast = false; //We published the last status item, disable full broadcast
 		return MQTT_DoItemPublishString("ip", HAL_GetMyIPString());
+
+	case PUBLISHITEM_SELF_INT_TEMP:
+		sprintf(dataStr, "%.1f", g_wifi_temperature);
+		return MQTT_DoItemPublishString("int_temp", dataStr);
 
 	default:
 		break;

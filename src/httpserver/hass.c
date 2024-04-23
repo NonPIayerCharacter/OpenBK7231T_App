@@ -104,7 +104,10 @@ void hass_populate_unique_id(ENTITY_TYPE type, int index, char* uniq_id) {
 		break;	
 	case HASS_BUILD:
 		sprintf(uniq_id, "%s_build", longDeviceName);
-		break;		
+		break;
+	case HASS_INT_TEMP:
+		sprintf(uniq_id, "%s_int_temp", longDeviceName);
+		break;
 	default:
 		// TODO: USE type here as well?
 		// If type is not set, and we use "sensor" naming, we can easily make collision
@@ -289,7 +292,10 @@ HassDeviceInfo* hass_init_device_info(ENTITY_TYPE type, int index, const char* p
 			break;
 		case HASS_BUILD:
 			sprintf(g_hassBuffer, "Build");
-			break;		
+			break;
+		case HASS_INT_TEMP:
+			sprintf(g_hassBuffer, "Internal Temperature");
+			break;
 		case ENERGY_SENSOR:
 			isSensor = true;
 			sprintf(g_hassBuffer, "Energy");
@@ -667,7 +673,13 @@ HassDeviceInfo* hass_init_sensor_device_info(ENTITY_TYPE type, int channel, int 
 	case HASS_BUILD:
 		cJSON_AddStringToObject(info->root, "stat_t", "~/build");
 		cJSON_AddStringToObject(info->root, "entity_category", "diagnostic");
-		break;	
+		break;
+	case HASS_INT_TEMP:
+		cJSON_AddStringToObject(info->root, "dev_cla", "temperature");
+		cJSON_AddStringToObject(info->root, "unit_of_meas", "°C");
+		cJSON_AddStringToObject(info->root, "stat_t", "~/int_temp");
+		cJSON_AddStringToObject(info->root, "entity_category", "diagnostic");
+		break;
 	default:
 		sprintf(g_hassBuffer, "~/%d/get", channel);
 		cJSON_AddStringToObject(info->root, "stat_t", g_hassBuffer);
