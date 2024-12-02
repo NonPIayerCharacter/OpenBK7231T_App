@@ -29,3 +29,7 @@
 	path = sdk/esp-idf
 	url = https://github.com/espressif/esp-idf.git
 	branch = release/v5.3
+[submodule "sdk/beken_freertos_sdk"]
+	path = sdk/beken_freertos_sdk
+	url = https://github.com/NonPIayerCharacter/beken_freertos_sdk.git
+	branch = master
