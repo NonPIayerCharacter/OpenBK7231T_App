@@ -29,6 +29,8 @@ int cmd_uartInitIndex = 0;
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_check.h"
+#elif PLATFORM_BEKEN_NEW
+#include "manual_ps_pub.h"
 #endif
 
 #define HASH_SIZE 128
@@ -91,13 +93,24 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 #endif
 	
 
-#ifdef PLATFORM_BEKEN
+#if defined(PLATFORM_BEKEN) && !defined(PLATFORM_BEKEN_NEW)
 	extern int bk_wlan_power_save_set_level(BK_PS_LEVEL level);
 	if (bOn) {
 		bk_wlan_power_save_set_level(/*PS_DEEP_SLEEP_BIT */  PS_RF_SLEEP_BIT | PS_MCU_SLEEP_BIT);
 	}
 	else {
 		bk_wlan_power_save_set_level(0);
+	}
+#elif defined(PLATFORM_BEKEN_NEW)
+	if(bOn)
+	{
+		//bk_wlan_dtim_rf_ps_mode_enable();
+		bk_wlan_mcu_ps_mode_enable();
+	}
+	else
+	{
+		//bk_wlan_dtim_rf_ps_mode_disable();
+		bk_wlan_mcu_ps_mode_disable();
 	}
 #elif defined(PLATFORM_W600)
 	if (bOn) {
@@ -180,13 +193,20 @@ static commandResult_t CMD_DeepSleep(const void* context, const char* cmd, const
 	}
 
 	timeMS = Tokenizer_GetArgInteger(0);
-#ifdef PLATFORM_BEKEN
+#if defined(PLATFORM_BEKEN) && !defined(PLATFORM_BEKEN_NEW)
 	// It requires a define in SDK file:
 	// OpenBK7231T\platforms\bk7231t\bk7231t_os\beken378\func\include\manual_ps_pub.h
 	// define there:
 	// #define     PS_SUPPORT_MANUAL_SLEEP     1
 	extern void bk_wlan_ps_wakeup_with_timer(UINT32 sleep_time);
 	bk_wlan_ps_wakeup_with_timer(timeMS);
+	return CMD_RES_OK;
+#elif defined(PLATFORM_BEKEN_NEW)
+	PS_DEEP_CTRL_PARAM params;
+	params.sleep_mode = MANUAL_MODE_IDLE;
+	params.wake_up_way = PS_DEEP_WAKEUP_RTC;
+	params.sleep_time = timeMS;
+	bk_enter_deep_sleep_mode(&params);
 	return CMD_RES_OK;
 #elif defined(PLATFORM_W600)
 #elif defined(PLATFORM_ESPIDF)

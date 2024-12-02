@@ -33,3 +33,7 @@
 	path = sdk/OpenTR6260
 	url = https://github.com/NonPIayerCharacter/OpenTR6260.git
 	branch = master
+[submodule "sdk/beken_freertos_sdk"]
+	path = sdk/beken_freertos_sdk
+	url = https://github.com/NonPIayerCharacter/beken_freertos_sdk.git
+	branch = master
