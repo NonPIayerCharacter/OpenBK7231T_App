@@ -283,6 +283,8 @@ static int http_rest_post(http_request_t* request) {
 		return http_rest_post_flash(request, START_ADR_OF_BK_PARTITION_OTA, LFS_BLOCKS_END);
 #elif PLATFORM_BK7231N
 		return http_rest_post_flash(request, START_ADR_OF_BK_PARTITION_OTA, LFS_BLOCKS_END);
+#elif PLATFORM_BEKEN_NEW
+		return http_rest_post_flash(request, START_ADR_OF_BK_PARTITION_OTA, LFS_BLOCKS_END);
 #elif PLATFORM_W600
 		return http_rest_post_flash(request, -1, -1);
 #elif PLATFORM_W800
