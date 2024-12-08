@@ -483,6 +483,10 @@ OSStatus rtos_create_thread(beken_thread_t* thread,
 	beken_thread_function_t function,
 	uint32_t stack_size, beken_thread_arg_t arg);
 
+#define GLOBAL_INT_DECLARATION()	;
+#define GLOBAL_INT_DISABLE()		;
+#define GLOBAL_INT_RESTORE()		;
+
 #else
 
 #include "gw_intf.h"
