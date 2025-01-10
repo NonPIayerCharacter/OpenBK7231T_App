@@ -21,6 +21,8 @@ else ifeq ($(CFG_SOC_NAME), 7)
 CCFLAGS += -DPLATFORM_BK7238
 endif
 
+APP_C += $(OBK_DIR)/../platforms/BK723x/ps.c
+
 APP_C += $(OBK_DIR)/base64/base64.c
 APP_C += $(OBK_DIR)/bitmessage/bitmessage_read.c
 APP_C += $(OBK_DIR)/bitmessage/bitmessage_write.c
@@ -49,6 +51,7 @@ APP_C += $(OBK_DIR)/hal/bk7231/hal_generic_bk7231.c
 APP_C += $(OBK_DIR)/hal/bk7231/hal_main_bk7231.c
 APP_C += $(OBK_DIR)/hal/bk7231/hal_pins_bk7231.c
 APP_C += $(OBK_DIR)/hal/bk7231/hal_wifi_bk7231.c
+APP_C += $(OBK_DIR)/hal/bk7231/hal_uart_bk7231.c
 APP_C += $(OBK_DIR)/httpserver/hass.c
 APP_C += $(OBK_DIR)/httpserver/http_basic_auth.c
 APP_C += $(OBK_DIR)/httpserver/http_fns.c

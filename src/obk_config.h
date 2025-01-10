@@ -171,6 +171,9 @@
 #define ENABLE_DRIVER_ADCSMOOTHER		1
 //#define ENABLE_DRIVER_OPENWEATHERMAP	1
 #define OBK_OTA_EXTENSION 		".rbl"
+#if PLATFORM_BEKEN_NEW
+#define NEW_TCP_SERVER				1
+#endif
 
 // ENABLE_I2C_ is a syntax for
 // our I2C system defines for drv_i2c_main.c

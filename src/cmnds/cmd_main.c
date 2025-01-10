@@ -41,7 +41,9 @@ extern void rtw_enable_wlan_low_pwr_mode(WLAN_LOW_PW_MODE mode);
 #include "wifi_conf.h"
 int g_sleepfactor = 1;
 #elif PLATFORM_BEKEN_NEW
+#include "co_math.h"
 #include "manual_ps_pub.h"
+#include "wlan_ui_pub.h"
 #endif
 
 #define HASH_SIZE 128
@@ -104,7 +106,7 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 #endif
 	
 
-#if defined(PLATFORM_BEKEN) && !defined(PLATFORM_BEKEN_NEW)
+#if defined(PLATFORM_BEKEN) //&& !defined(PLATFORM_BEKEN_NEW)
 	extern int bk_wlan_power_save_set_level(BK_PS_LEVEL level);
 	if (bOn) {
 		bk_wlan_power_save_set_level(/*PS_DEEP_SLEEP_BIT */  PS_RF_SLEEP_BIT | PS_MCU_SLEEP_BIT);
@@ -112,17 +114,17 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 	else {
 		bk_wlan_power_save_set_level(0);
 	}
-#elif defined(PLATFORM_BEKEN_NEW)
-	if(bOn)
-	{
-		//bk_wlan_dtim_rf_ps_mode_enable();
-		bk_wlan_mcu_ps_mode_enable();
-	}
-	else
-	{
-		//bk_wlan_dtim_rf_ps_mode_disable();
-		bk_wlan_mcu_ps_mode_disable();
-	}
+//#elif defined(PLATFORM_BEKEN_NEW)
+//	if(bOn)
+//	{
+//		//bk_wlan_dtim_rf_ps_mode_enable();
+//		bk_wlan_mcu_ps_mode_enable();
+//	}
+//	else
+//	{
+//		//bk_wlan_dtim_rf_ps_mode_disable();
+//		bk_wlan_mcu_ps_mode_disable();
+//	}
 #elif defined(PLATFORM_W600)
 	if (bOn) {
 		tls_wifi_set_psflag(1, 0);	//Enable powersave but don't save to flash

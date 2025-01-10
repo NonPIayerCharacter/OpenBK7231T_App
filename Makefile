@@ -172,6 +172,7 @@ prebuild_OpenRTL8710A:
 		echo "prebuild found for OpenRTL8710A"; \
 		sh platforms/RTL8710A/pre_build.sh; \
 	else echo "prebuild for OpenRTL8710A not found ... "; \
+	fi
 
 prebuild_OpenBK7238:
 	git submodule update --init --recursive --remote sdk/beken_freertos_sdk
