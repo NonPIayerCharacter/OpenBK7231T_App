@@ -158,7 +158,7 @@ SRC_C += ./fixes/blank.c
 
 APP_CXX += $(OBK_DIR)/driver/drv_ir.cpp
 
-BERRY_SRCPATH = $(OBK_DIR)/../libraries/berry/src/
+BERRY_SRCPATH = $(OBK_DIR)/../libraries/berry/src
 
 # different frameworks put object files in different places,
 # berry needs to add a rule to autogenerate some files before the object files
@@ -175,3 +175,4 @@ APP_C += $(OBK_DIR)/berry/be_bindings.c
 APP_C += $(OBK_DIR)/berry/be_modtab.c
 APP_C += $(OBK_DIR)/berry/be_port.c
 APP_C += $(OBK_DIR)/berry/be_run.c
+APP_C += $(OBK_DIR)/berry/modules/be_i2c.c

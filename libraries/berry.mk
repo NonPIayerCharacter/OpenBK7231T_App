@@ -61,7 +61,7 @@ $(BERRY_OBJS): berry_const_tab
 
 berry_const_tab: $(BERRY_GENERATE) $(BERRY_SRC_C) $(BERRY_CONFIG)
 	$(MSG) [Prebuild] generate resources
-	$(Q) $(COC)  -o $(BERRY_GENERATE) $(BERRY_SRCPATH) -c $(BERRY_CONFIG)
+	$(Q) $(COC)  -o $(BERRY_GENERATE) $(BERRY_SRCPATH) $(OBK_DIR)/berry/modules/ -c $(BERRY_CONFIG)
 
 $(BERRY_GENERATE):
 	$(Q) mkdir $(BERRY_GENERATE)
