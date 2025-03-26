@@ -65,6 +65,7 @@ CSRC  += user_main.c
 CSRC  += driver/drv_adcButton.c
 CSRC  += driver/drv_adcSmoother.c
 CSRC  += driver/drv_aht2x.c
+CSRC  += driver/drv_amebad_hci.c
 CSRC  += driver/drv_battery.c
 CSRC  += driver/drv_bl_shared.c
 CSRC  += driver/drv_bl0937.c

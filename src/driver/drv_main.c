@@ -450,14 +450,21 @@ static driver_t g_drivers[] = {
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"A bridge relay driver, added for [TONGOU TO-Q-SY1-JWT Din Rail Switch](https://www.elektroda.com/rtvforum/topic3934580.html). See linked topic for info.",
 	//drvdetail:"requires":""}
-	{ "Bridge",     Bridge_driver_Init, NULL,                       NULL, Bridge_driver_QuickFrame, Bridge_driver_DeInit, Bridge_driver_OnChannelChanged, false }
+	{ "Bridge",     Bridge_driver_Init, NULL,                       NULL, Bridge_driver_QuickFrame, Bridge_driver_DeInit, Bridge_driver_OnChannelChanged, false },
 #endif
 #if ENABLE_DRIVER_UART_TCP
 	//drvdetail:{"name":"UART to TCP bridge",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"UART to TCP, mainly for WiFi Zigbee coordinators.",
 	//drvdetail:"requires":""}
-	{ "UartTCP",		UART_TCP_Init,		NULL,	NULL, NULL, UART_TCP_Deinit, NULL, false }
+	{ "UartTCP",		UART_TCP_Init,		NULL,	NULL, NULL, UART_TCP_Deinit, NULL, false },
+#endif
+#if ENABLE_DRIVER_AMEBAD_HCI
+	//drvdetail:{"name":"HCI to TCP bridge",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"HCI to TCP for AmebaD.",
+	//drvdetail:"requires":""}
+	{ "Hci", HCI_Init, NULL, NULL, NULL, HCI_Deinit, NULL, false }
 #endif
 };
 
