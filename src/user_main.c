@@ -598,6 +598,9 @@ void Main_OnEverySecond()
 		temp_single_get_current_temperature(&temperature);
 #if PLATFORM_BK7231T
 		g_wifi_temperature = 2.21f * (temperature / 25.0f) - 65.91f;
+#if PLATFORM_BEKEN_NEW
+		g_wifi_temperature *= -1;
+#endif
 #else
 		g_wifi_temperature = (-0.457f * temperature) + 188.474f;
 #endif

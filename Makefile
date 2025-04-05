@@ -79,7 +79,7 @@ sdk/OpenLN882H/project/OpenBeken/app:
 
 .PHONY: prebuild_OpenBK7231N prebuild_OpenBK7231T prebuild_OpenBL602 prebuild_OpenLN882H 
 .PHONY: prebuild_OpenW600 prebuild_OpenW800 prebuild_OpenXR809 prebuild_ESPIDF prebuild_OpenTR6260
-.PHONY: prebuild_OpenRTL87X0C prebuild_OpenBK7238 prebuild_OpenBK7231N_ALT
+.PHONY: prebuild_OpenRTL87X0C prebuild_OpenBK7238 prebuild_OpenBK7231N_ALT prebuild_OpenBK7231U
 
 prebuild_OpenBK7231N:
 	git submodule update --init --recursive sdk/OpenBK7231N
@@ -217,6 +217,24 @@ prebuild_OpenBK7231N_ALT:
 		echo "prebuild found for OpenBK7231N"; \
 		sh platforms/BK723x/pre_build_7231n.sh; \
 	else echo "prebuild for OpenBK7231N not found ... "; \
+	fi
+
+prebuild_OpenBK7231U:
+	git submodule update --init --recursive sdk/beken_freertos_sdk
+	git submodule update --init --recursive libraries/berry
+	@if [ -e platforms/BK723x/pre_build_7231u.sh ]; then \
+		echo "prebuild found for OpenBK7231U"; \
+		sh platforms/BK723x/pre_build_7231u.sh; \
+	else echo "prebuild for OpenBK7231U not found ... "; \
+	fi
+
+prebuild_OpenBK7231T_ALT:
+	git submodule update --init --recursive sdk/beken_freertos_sdk
+	git submodule update --init --recursive libraries/berry
+	@if [ -e platforms/BK723x/pre_build_7231t.sh ]; then \
+		echo "prebuild found for OpenBK7231T"; \
+		sh platforms/BK723x/pre_build_7231t.sh; \
+	else echo "prebuild for OpenBK7231T not found ... "; \
 	fi
 
 prebuild_OpenECR6600:
@@ -406,17 +424,38 @@ OpenRTL8720D: prebuild_OpenRTL8720D
 OpenBK7238: prebuild_OpenBK7238
 	cd sdk/beken_freertos_sdk && sh build.sh bk7238 $(APP_VERSION)
 	mkdir -p output/$(APP_VERSION)
-	cp sdk/beken_freertos_sdk/out/all_2M.1220.bin output/$(APP_VERSION)/OpenBK7238_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7238.bin output/$(APP_VERSION)/OpenBK7238_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7238_QIO.bin output/$(APP_VERSION)/OpenBK7238_QIO_${APP_VERSION}.bin
 	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7238_${APP_VERSION}.rbl
-	cp sdk/beken_freertos_sdk/out/bk7238_bsp_uart_2M.1220.bin output/$(APP_VERSION)/OpenBK7238_UA_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7238_UA.bin output/$(APP_VERSION)/OpenBK7238_UA_${APP_VERSION}.bin
+
+.PHONY: OpenBK7231U
+OpenBK7231U: prebuild_OpenBK7231U
+	cd sdk/beken_freertos_sdk && sh build.sh bk7231u $(APP_VERSION)
+	mkdir -p output/$(APP_VERSION)
+	cp sdk/beken_freertos_sdk/out/bk7231u_QIO.bin output/$(APP_VERSION)/OpenBK7231U_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231u.bin output/$(APP_VERSION)/OpenBK7231U_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7231U_${APP_VERSION}.rbl
+	cp sdk/beken_freertos_sdk/out/bk7231u_UA.bin output/$(APP_VERSION)/OpenBK7231U_UA_${APP_VERSION}.bin
 
 .PHONY: OpenBK7231N_ALT
 OpenBK7231N_ALT: prebuild_OpenBK7231N_ALT
 	cd sdk/beken_freertos_sdk && sh build.sh bk7231n $(APP_VERSION)
 	mkdir -p output/$(APP_VERSION)
-	cp sdk/beken_freertos_sdk/out/all_2M.1220.bin output/$(APP_VERSION)/OpenBK7231N_ALT_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231n_QIO.bin output/$(APP_VERSION)/OpenBK7231N_ALT_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231n.bin output/$(APP_VERSION)/OpenBK7231N_ALT_${APP_VERSION}.bin
 	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7231N_ALT_${APP_VERSION}.rbl
-	cp sdk/beken_freertos_sdk/out/bk7231n_bsp_uart_2M.1220.bin output/$(APP_VERSION)/OpenBK7231N_ALT_UA_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231n_UA.bin output/$(APP_VERSION)/OpenBK7231N_ALT_UA_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/BK7231M_QIO.bin output/$(APP_VERSION)/OpenBK7231M_ALT_QIO_${APP_VERSION}.bin
+
+.PHONY: OpenBK7231T_ALT
+OpenBK7231T_ALT: prebuild_OpenBK7231T_ALT
+	cd sdk/beken_freertos_sdk && sh build.sh bk7231 $(APP_VERSION)
+	mkdir -p output/$(APP_VERSION)
+	cp sdk/beken_freertos_sdk/out/bk7231t_QIO.bin output/$(APP_VERSION)/OpenBK7231T_ALT_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231u.bin output/$(APP_VERSION)/OpenBK7231T_ALT_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7231T_ALT_${APP_VERSION}.rbl
+	cp sdk/beken_freertos_sdk/out/bk7231t_UA.bin output/$(APP_VERSION)/OpenBK7231T_ALT_UA_${APP_VERSION}.bin
 	
 .PHONY: OpenECR6600
 ECRDIR := $(PWD)/sdk/OpenECR6600

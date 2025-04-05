@@ -68,6 +68,11 @@ void OTA_RequestDownloadFromHTTP(const char *s);
 #define DEVICENAME_PREFIX_SHORT "obk"
 #define PLATFORM_MCU_NAME "BK7238"
 #define MANUFACTURER "Beken Corporation"
+#elif PLATFORM_BK7231U
+#define DEVICENAME_PREFIX_FULL "OpenBK7231U"
+#define DEVICENAME_PREFIX_SHORT "obk"
+#define PLATFORM_MCU_NAME "BK7231U"
+#define MANUFACTURER "Beken Corporation"
 #elif PLATFORM_BL602
 #define DEVICENAME_PREFIX_FULL "OpenBL602"
 #define DEVICENAME_PREFIX_SHORT "obl"
