@@ -18,7 +18,7 @@ else
 CCFLAGS += -DPLATFORM_BK7231U
 endif
 else ifeq ($(CFG_SOC_NAME), 3)
-CCFLAGS += -DPLATFORM_BK7251
+CCFLAGS += -DPLATFORM_BK7252
 else ifeq ($(CFG_SOC_NAME), 5)
 CCFLAGS += -DPLATFORM_BK7231N
 else ifeq ($(CFG_SOC_NAME), 7)
@@ -61,7 +61,7 @@ APP_C += $(OBK_DIR)/httpserver/hass.c
 APP_C += $(OBK_DIR)/httpserver/http_basic_auth.c
 APP_C += $(OBK_DIR)/httpserver/http_fns.c
 APP_C += $(OBK_DIR)/httpserver/new_tcp_server.c
-#APP_C += $(OBK_DIR)/httpserver/http_tcp_server.c
+APP_C += $(OBK_DIR)/httpserver/http_tcp_server.c
 APP_C += $(OBK_DIR)/httpserver/json_interface.c
 APP_C += $(OBK_DIR)/httpserver/new_http.c
 APP_C += $(OBK_DIR)/httpserver/rest_interface.c

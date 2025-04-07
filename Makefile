@@ -80,10 +80,13 @@ sdk/OpenLN882H/project/OpenBeken/app:
 .PHONY: prebuild_OpenBK7231N prebuild_OpenBK7231T prebuild_OpenBL602 prebuild_OpenLN882H 
 .PHONY: prebuild_OpenW600 prebuild_OpenW800 prebuild_OpenXR809 prebuild_ESPIDF prebuild_OpenTR6260
 .PHONY: prebuild_OpenRTL87X0C prebuild_OpenBK7238 prebuild_OpenBK7231N_ALT prebuild_OpenBK7231U
+.PHONY: prebuild_OpenBK7231N_ALT prebuild_OpenBK7231T_ALT prebuild_OpenBK7252
 
 prebuild_OpenBK7231N:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenBK7231N
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BK7231N/pre_build.sh ]; then \
 		echo "prebuild found for OpenBK7231N"; \
 		sh platforms/BK7231N/pre_build.sh; \
@@ -91,8 +94,10 @@ prebuild_OpenBK7231N:
 	fi
 
 prebuild_OpenBK7231T:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenBK7231T
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BK7231T/pre_build.sh ]; then \
 		echo "prebuild found for OpenBK7231T"; \
 		sh platforms/BK7231T/pre_build.sh; \
@@ -100,8 +105,10 @@ prebuild_OpenBK7231T:
 	fi
 
 prebuild_OpenBL602:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenBL602
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BL602/pre_build.sh ]; then \
 		echo "prebuild found for OpenBL602"; \
 		sh platforms/BL602/pre_build.sh; \
@@ -109,8 +116,10 @@ prebuild_OpenBL602:
 	fi
 
 prebuild_OpenLN882H:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenLN882H
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/LN882H/pre_build.sh ]; then \
 		echo "prebuild found for OpenLN882H"; \
 		sh platforms/LN882H/pre_build.sh; \
@@ -118,8 +127,10 @@ prebuild_OpenLN882H:
 	fi
 
 prebuild_OpenW600:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenW600
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/W600/pre_build.sh ]; then \
 		echo "prebuild found for OpenW600"; \
 		sh platforms/W600/pre_build.sh; \
@@ -127,8 +138,10 @@ prebuild_OpenW600:
 	fi
 
 prebuild_OpenW800:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenW800
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/W800/pre_build.sh ]; then \
 		echo "prebuild found for OpenW800"; \
 		sh platforms/W800/pre_build.sh; \
@@ -136,8 +149,10 @@ prebuild_OpenW800:
 	fi
 
 prebuild_OpenXR809:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenXR809
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/XR809/pre_build.sh ]; then \
 		echo "prebuild found for OpenXR809"; \
 		sh platforms/XR809/pre_build.sh; \
@@ -145,8 +160,10 @@ prebuild_OpenXR809:
 	fi
 
 prebuild_ESPIDF:
+ifdef GITHUB_ACTIONS
 	#git submodule update --init --recursive sdk/esp-idf
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/ESP-IDF/pre_build.sh ]; then \
 		echo "prebuild found for ESP-IDF"; \
 		sh platforms/ESP-IDF/pre_build.sh; \
@@ -154,8 +171,10 @@ prebuild_ESPIDF:
 	fi
 
 prebuild_OpenTR6260:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenTR6260
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/TR6260/pre_build.sh ]; then \
 		echo "prebuild found for OpenTR6260"; \
 		sh platforms/TR6260/pre_build.sh; \
@@ -163,8 +182,10 @@ prebuild_OpenTR6260:
 	fi
 
 prebuild_OpenRTL87X0C:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenRTL87X0C
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/RTL87X0C/pre_build.sh ]; then \
 		echo "prebuild found for OpenRTL87X0C"; \
 		sh platforms/RTL87X0C/pre_build.sh; \
@@ -172,8 +193,10 @@ prebuild_OpenRTL87X0C:
 	fi
 
 prebuild_OpenRTL8710B:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenRTL8710A_B
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/RTL8710B/pre_build.sh ]; then \
 		echo "prebuild found for OpenRTL8710B"; \
 		sh platforms/RTL8710B/pre_build.sh; \
@@ -185,8 +208,10 @@ prebuild_OpenRTL8710B:
 	fi
 
 prebuild_OpenRTL8710A:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenRTL8710A_B
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/RTL8710A/pre_build.sh ]; then \
 		echo "prebuild found for OpenRTL8710A"; \
 		sh platforms/RTL8710A/pre_build.sh; \
@@ -194,7 +219,10 @@ prebuild_OpenRTL8710A:
 	fi
 
 prebuild_OpenRTL8720D:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenRTL8720D
+	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/RTL8720D/pre_build.sh ]; then \
 		echo "prebuild found for OpenRTL8720D"; \
 		sh platforms/RTL8720D/pre_build.sh; \
@@ -202,8 +230,10 @@ prebuild_OpenRTL8720D:
 	fi
 
 prebuild_OpenBK7238:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/beken_freertos_sdk
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BK723x/pre_build_7238.sh ]; then \
 		echo "prebuild found for OpenBK7238"; \
 		sh platforms/BK723x/pre_build_7238.sh; \
@@ -211,8 +241,10 @@ prebuild_OpenBK7238:
 	fi
 
 prebuild_OpenBK7231N_ALT:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/beken_freertos_sdk
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BK723x/pre_build_7231n.sh ]; then \
 		echo "prebuild found for OpenBK7231N"; \
 		sh platforms/BK723x/pre_build_7231n.sh; \
@@ -220,8 +252,10 @@ prebuild_OpenBK7231N_ALT:
 	fi
 
 prebuild_OpenBK7231U:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/beken_freertos_sdk
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BK723x/pre_build_7231u.sh ]; then \
 		echo "prebuild found for OpenBK7231U"; \
 		sh platforms/BK723x/pre_build_7231u.sh; \
@@ -229,16 +263,32 @@ prebuild_OpenBK7231U:
 	fi
 
 prebuild_OpenBK7231T_ALT:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/beken_freertos_sdk
 	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/BK723x/pre_build_7231t.sh ]; then \
 		echo "prebuild found for OpenBK7231T"; \
 		sh platforms/BK723x/pre_build_7231t.sh; \
 	else echo "prebuild for OpenBK7231T not found ... "; \
 	fi
 
+prebuild_OpenBK7252:
+ifdef GITHUB_ACTIONS
+	git submodule update --init --recursive sdk/beken_freertos_sdk
+	git submodule update --init --recursive libraries/berry
+endif
+	@if [ -e platforms/BK723x/pre_build_7252.sh ]; then \
+		echo "prebuild found for OpenBK7252"; \
+		sh platforms/BK723x/pre_build_7252.sh; \
+	else echo "prebuild for OpenBK7252 not found ... "; \
+	fi
+
 prebuild_OpenECR6600:
+ifdef GITHUB_ACTIONS
 	git submodule update --init --recursive sdk/OpenECR6600
+	git submodule update --init --recursive libraries/berry
+endif
 	@if [ -e platforms/ECR6600/pre_build.sh ]; then \
 		echo "prebuild found for OpenECR6600"; \
 		sh platforms/ECR6600/pre_build.sh; \
@@ -437,6 +487,17 @@ OpenBK7231U: prebuild_OpenBK7231U
 	cp sdk/beken_freertos_sdk/out/bk7231u.bin output/$(APP_VERSION)/OpenBK7231U_${APP_VERSION}.bin
 	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7231U_${APP_VERSION}.rbl
 	cp sdk/beken_freertos_sdk/out/bk7231u_UA.bin output/$(APP_VERSION)/OpenBK7231U_UA_${APP_VERSION}.bin
+
+.PHONY: OpenBK7252
+OpenBK7252: prebuild_OpenBK7252
+	cd sdk/beken_freertos_sdk && sh build.sh bk7251 $(APP_VERSION)
+	mkdir -p output/$(APP_VERSION)
+	cp sdk/beken_freertos_sdk/out/bk7251.bin output/$(APP_VERSION)/OpenBK7252_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7251_QIO.bin output/$(APP_VERSION)/OpenBK7252_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7252_${APP_VERSION}.rbl
+	cp sdk/beken_freertos_sdk/out/bk7251_UA.bin output/$(APP_VERSION)/OpenBK7252_UA_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7251_Tuya_QIO.bin output/$(APP_VERSION)/OpenBK7252_Tuya_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7251_Tuya_UA.bin output/$(APP_VERSION)/OpenBK7252_Tuya_UA_${APP_VERSION}.bin
 
 .PHONY: OpenBK7231N_ALT
 OpenBK7231N_ALT: prebuild_OpenBK7231N_ALT
