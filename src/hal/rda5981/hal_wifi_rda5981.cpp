@@ -9,18 +9,20 @@ extern "C" {
 #include "../hal_wifi.h"
 #include "../../new_common.h"
 #include "../../logging/logging.h"
+#include "../../new_cfg.h"
 #undef connect
 bool g_bOpenAccessPointMode = 0;
 static void (*g_wifiStatusCallback)(int code);
+extern struct netif lwip_sta_netif;
 
 const char* HAL_GetMyIPString()
 {
-	return wifi.get_ip_address();
+	return g_bOpenAccessPointMode ? wifi.get_ip_address_ap() : wifi.get_ip_address();
 }
 
 const char* HAL_GetMyGatewayString()
 {
-	return wifi.get_gateway();
+	return g_bOpenAccessPointMode ? wifi.get_gateway_ap() : wifi.get_gateway();
 }
 
 const char* HAL_GetMyDNSString()
@@ -30,7 +32,7 @@ const char* HAL_GetMyDNSString()
 
 const char* HAL_GetMyMaskString()
 {
-	return wifi.get_netmask();
+	return g_bOpenAccessPointMode ? wifi.get_netmask_ap() : wifi.get_netmask();
 }
 
 void WiFI_GetMacAddress(char* mac)
@@ -113,6 +115,7 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticI
 		g_wifiStatusCallback(WIFI_STA_CONNECTING);
 	}
 	wifi.set_dhcp(1);
+	netif_set_hostname(&lwip_sta_netif, CFG_GetDeviceName());
 	wifi.connect(oob_ssid, connect_key, NULL, NSAPI_SECURITY_NONE, 0);
 }
 
@@ -124,6 +127,7 @@ void HAL_DisconnectFromWifi()
 int HAL_SetupWiFiOpenAccessPoint(const char* ssid)
 {
 	g_bOpenAccessPointMode = 1;
+	wifi.set_network_ap("192.168.4.1", "255.255.255.0", "192.168.4.1", "192.168.4.2", "192.168.4.254");
 	wifi.start_ap(ssid, "", 1);
 	return 0;
 }

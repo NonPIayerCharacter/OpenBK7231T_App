@@ -1828,7 +1828,7 @@ commandResult_t MQTT_StartMQTTTestThread(const void* context, const char* cmd, c
 #elif PLATFORM_TXW81X
 	os_task_create("mqtt", mqtt_timer_thread, (void*)info, 15, 0, NULL, 1024);
 #elif PLATFORM_RDA5981
-	rda_thread_new("mqtt", mqtt_timer_thread, NULL, 1024, 15);
+	rda_thread_new("mqtt", mqtt_timer_thread, NULL, 1024, osPriorityNormal);
 #elif PLATFORM_XRADIO || PLATFORM_LN882H
 	OS_TimerSetInvalid(&timer);
 	if (OS_TimerCreate(&timer, OS_TIMER_PERIODIC, MQTT_Test_Tick, (void*)info, MQTT_TMR_DURATION) != OS_OK)

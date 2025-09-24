@@ -145,12 +145,14 @@ size_t xPortGetFreeHeapSize()
 	return sram_free_heap_size();
 }
 #elif PLATFORM_RDA5981
-#include "hal/api/mbed_stats.h"
+//#include "hal/api/mbed_stats.h"
+//extern uint32_t mbed_heap_size;
 size_t xPortGetFreeHeapSize()
 {
-	mbed_stats_heap_t heap_stats;
-	mbed_stats_heap_get(&heap_stats);
-	return heap_stats.max_size - heap_stats.current_size;
+	//mbed_stats_heap_t heap_stats;
+	//mbed_stats_heap_get(&heap_stats);
+	//return mbed_heap_size - heap_stats.current_size;
+	return 20000;
 }
 #endif
 
@@ -204,7 +206,7 @@ void extended_app_waiting_for_launch2(void) {
 #endif
 
 
-#if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266 || PLATFORM_REALTEK_NEW || PLATFORM_RDA5981
+#if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266 || PLATFORM_REALTEK_NEW
 
 int LWIP_GetMaxSockets() {
 	return 0;
@@ -307,33 +309,31 @@ OSStatus rtos_suspend_thread(beken_thread_t* thread)
 
 #elif PLATFORM_RDA5981
 
-OSStatus rtos_create_thread(beken_thread_t* thread,
+OSStatus rtos_create_thread(beken_thread_t thread,
 	uint8_t priority, const char* name,
 	beken_thread_function_t function,
 	uint32_t stack_size, beken_thread_arg_t arg)
 {
-	OSStatus err = kNoErr;
-
-	*thread = rda_thread_new(name, function, arg, stack_size, priority);
-	if(*thread != NULL)
+	thread = rda_thread_new(name, function, arg, stack_size, priority);
+	if(thread != NULL)
 	{
 		return 0;
 	}
 	else
 	{
-		printf("Thread create %s - err %i\n", name, err);
+		printf("Thread create %s - err\n", name);
 	}
 	return 1;
 }
 
-OSStatus rtos_delete_thread(beken_thread_t* thread)
+OSStatus rtos_delete_thread(beken_thread_t thread)
 {
 	if(thread == NULL)
 	{
 		void* hdl = rda_thread_get_id();
 		rda_thread_delete(hdl);
 	}
-	else rda_thread_delete(*thread);
+	else rda_thread_delete((osThreadId)thread);
 	return kNoErr;
 }
 
@@ -1145,7 +1145,7 @@ void QuickTick_StartThread(void)
 #elif PLATFORM_TXW81X
 	os_task_create("quick", quick_timer_thread, NULL, 15, 0, NULL, QT_STACK_SIZE);
 #elif PLATFORM_RDA5981
-	rda_thread_new("quick", quick_timer_thread, NULL, QT_STACK_SIZE, 15);
+	rda_thread_new("quick", quick_timer_thread, NULL, QT_STACK_SIZE, osPriorityNormal);
 #else
 	OSStatus result;
 

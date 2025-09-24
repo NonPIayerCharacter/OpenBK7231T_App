@@ -674,9 +674,11 @@ OpenTXW81X: prebuild_OpenTXW81X
 	
 .PHONY: OpenRDA5981
 OpenRDA5981: prebuild_OpenRDA5981
-	cd sdk/OpenRDA5981 && make APP_VERSION=$(APP_VERSION) OBK_VARIANT=$(OBK_VARIANT) -j $(shell nproc)
+	$(MAKE) -C sdk/OpenRDA5981 APP_VERSION=$(APP_VERSION) OBK_VARIANT=$(OBK_VARIANT) -j $(shell nproc)
 	mkdir -p output/$(APP_VERSION)
 	cp sdk/OpenRDA5981/.build/OpenBeken.bin output/$(APP_VERSION)/OpenRDA5981_$(APP_VERSION).bin
+	./sdk/OpenRDA5981/ota_lzma/imgpkt e sdk/OpenRDA5981/.build/OpenBeken.bin sdk/OpenRDA5981/.build/OpenBeken.bin.lzma
+	python3 sdk/OpenRDA5981/ota_lzma/ota_pack_image_lzma.py sdk/OpenRDA5981/.build/OpenBeken.bin sdk/OpenRDA5981/.build/OpenBeken.bin.lzma output/$(APP_VERSION)/OpenRDA5981_$(APP_VERSION)_ota.img
 
 # Add custom Makefile if required
 -include custom.mk

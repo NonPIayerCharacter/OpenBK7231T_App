@@ -125,7 +125,8 @@ exit:
 	lwip_close(fd);
 	arg->isCompleted = true;
 #if PLATFORM_RDA5981
-	osDelay(0xFFFFFFFF);
+	arg->thread = NULL;
+	rtos_delete_thread(NULL);
 #else
 	rtos_suspend_thread(NULL);
 #endif

@@ -887,29 +887,29 @@ OSStatus rtos_suspend_thread(beken_thread_t* thread);
 #define lwip_close_force(x) lwip_close(x)
 #define kNoErr                      0       //! No error occurred.
 typedef void* beken_thread_arg_t;
-typedef osThreadId beken_thread_t;
+typedef void* beken_thread_t;
 typedef void (*beken_thread_function_t)(beken_thread_arg_t arg);
 typedef int OSStatus;
-typedef osSemaphoreId SemaphoreHandle_t;
-#define xSemaphoreCreateMutex() rda_sem_create(1)
-#define xSemaphoreTake(a, b) rda_sem_wait(a, b)
-#define xSemaphoreGive rda_sem_release
+typedef void* SemaphoreHandle_t;
+#define xSemaphoreCreateMutex rda_mutex_create
+#define xSemaphoreTake(a, b) (rda_mutex_wait(a, b) == 0)
+#define xSemaphoreGive rda_mutex_realease
 #define pdTRUE true
 
-#define portTICK_RATE_MS os_tickfreq 
+#define portTICK_RATE_MS osKernelSysTickMicroSec(1000 * 1000) 
 typedef int BaseType_t;
 typedef uint64_t portTickType;
-#define xTaskGetTickCount rda_get_cur_time_ms
+#define xTaskGetTickCount osKernelSysTick
 
 #define BEKEN_DEFAULT_WORKER_PRIORITY      (6)
 #define BEKEN_APPLICATION_PRIORITY         (7)
 
-OSStatus rtos_delete_thread(beken_thread_t* thread);
-OSStatus rtos_create_thread(beken_thread_t* thread,
+OSStatus rtos_delete_thread(beken_thread_t thread);
+OSStatus rtos_create_thread(beken_thread_t thread,
 	uint8_t priority, const char* name,
 	beken_thread_function_t function,
 	uint32_t stack_size, beken_thread_arg_t arg);
-OSStatus rtos_suspend_thread(beken_thread_t* thread);
+OSStatus rtos_suspend_thread(beken_thread_t thread);
 
 #define GLOBAL_INT_DECLARATION()	;
 #define GLOBAL_INT_DISABLE()		;

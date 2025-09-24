@@ -3,12 +3,11 @@
 #include "../../new_common.h"
 #include "../hal_flashVars.h"
 #include "../../logging/logging.h"
-#include <easyflash.h>
+#include "wland_flash.h"
 
 FLASH_VARS_STRUCTURE flash_vars;
 static int g_loaded = 0;
 
-#define KV_KEY_FLASH_VARS "OBK_FV"
 #define SAVE_CHANGE_IF_REQUIRED_AND_COUNT(target, source, counter) \
 	if((target) != (source)) { \
 		(target) = (source); \
@@ -19,32 +18,14 @@ extern void InitEasyFlashIfNeeded();
 
 static int ReadFlashVars(void* target, int dataLen)
 {
-	InitEasyFlashIfNeeded();
-	int readLen;
-	ADDLOG_DEBUG(LOG_FEATURE_CFG, "ReadFlashVars: will read %d bytes", dataLen);
-	readLen = ef_get_env_blob(KV_KEY_FLASH_VARS, target, dataLen, NULL);
-	ADDLOG_DEBUG(LOG_FEATURE_CFG, "ReadFlashVars: really loaded %d bytes", readLen);
-	g_loaded = 1;
+	g_loaded = rda5981_read_user_data(target, dataLen, BIT18) == 0;
 	return dataLen;
 }
 
 static int SaveFlashVars(void* src, int dataLen)
 {
-	InitEasyFlashIfNeeded();
-	EfErrCode res;
-
-	res = ef_set_env_blob(KV_KEY_FLASH_VARS, src, dataLen);
-	if(res == EF_ENV_INIT_FAILED)
-	{
-		ADDLOG_DEBUG(LOG_FEATURE_CFG, "SaveFlashVars: EF_ENV_INIT_FAILED for %d bytes", dataLen);
-		return 0;
-	}
-	if(res == EF_ENV_NAME_ERR)
-	{
-		ADDLOG_DEBUG(LOG_FEATURE_CFG, "SaveFlashVars: EF_ENV_ARG_ERR for %d bytes", dataLen);
-		return 0;
-	}
-	ADDLOG_DEBUG(LOG_FEATURE_CFG, "SaveFlashVars: saved %d bytes", dataLen);
+	rda5981_erase_user_data(BIT18);
+	rda5981_write_user_data(src, dataLen, BIT18);
 	return dataLen;
 }
 

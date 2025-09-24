@@ -31,20 +31,17 @@ void HAL_Run_WDT()
 
 int HAL_FlashRead(char* buffer, int readlen, int startaddr)
 {
-	int res = rda5981_read_flash(startaddr, buffer, readlen);
-	return !res;
+	return rda5981_read_flash(0x18000000 + startaddr, (uint8_t*)buffer, readlen);
 }
 
 int HAL_FlashWrite(char* buffer, int writelen, int startaddr)
 {
-	int res = rda5981_write_flash(startaddr, buffer, writelen);
-	return !res;
+	return rda5981_write_flash(0x18000000 + startaddr, (uint8_t*)buffer, writelen);
 }
 
 int HAL_FlashEraseSector(int startaddr)
 {
-	int res = rda5981_erase_flash(startaddr, 0x1000);
-	return !res;
+	return rda5981_erase_flash(0x18000000 + startaddr, 0x1000);
 }
 
 #endif // PLATFORM_RDA5981

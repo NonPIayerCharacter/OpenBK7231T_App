@@ -77,11 +77,13 @@ extern struct spi_nor_flash* obk_flash;
 #include "stdbool.h"
 #include "rda_sys_wrapper.h"
 
-typedef osSemaphoreId QueueHandle_t;
-#define xSemaphoreCreateMutex() rda_sem_create(1)
-#define xSemaphoreTake(a, b) rda_sem_wait(a, b)
-#define xSemaphoreGive rda_sem_release
-#define pdTRUE true
+typedef void* QueueHandle_t;
+//#define xSemaphoreCreateMutex() rda_sem_create(0)
+//#define xSemaphoreTake rda_sem_wait
+//#define xSemaphoreGive rda_sem_release
+#define xSemaphoreCreateMutex rda_mutex_create
+#define xSemaphoreTake rda_mutex_wait
+#define xSemaphoreGive rda_mutex_realease
 
 #elif WINDOWS
 

@@ -15,7 +15,7 @@
 
 extern uint8_t g_StartupDelayOver;
 
-int g_loglevel = LOG_INFO; // default to info
+int g_loglevel = LOG_ALL; // default to info
 unsigned int logfeatures = (
 	(1 << 0) |
 	(1 << 1) |
