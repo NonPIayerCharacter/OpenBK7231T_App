@@ -546,6 +546,20 @@
 #undef ENABLE_HTTP_MAC
 #undef ENABLE_LED_BASIC
 
+#elif PLATFORM_RDA5981
+
+#define ENABLE_EXPAND_CONSTANT					1
+#define ENABLE_HA_DISCOVERY						1
+#define ENABLE_MQTT								1
+#define ENABLE_OBK_SCRIPTING					1
+#define ENABLE_ADVANCED_CHANNELTYPES_DISCOVERY	1
+#define NEW_TCP_SERVER							1
+#define NO_CHIP_TEMPERATURE						1
+//#define ENABLE_DRIVER_TUYAMCU					1
+#define ENABLE_DRIVER_DHT						1
+#define ENABLE_DRIVER_AHT2X						1
+#undef ENABLE_HTTP_MAC
+
 #else
 
 // #error "Platform not defined"

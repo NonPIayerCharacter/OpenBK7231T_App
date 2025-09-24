@@ -124,7 +124,11 @@ exit:
 
 	lwip_close(fd);
 	arg->isCompleted = true;
+#if PLATFORM_RDA5981
+	osDelay(0xFFFFFFFF);
+#else
 	rtos_suspend_thread(NULL);
+#endif
 }
 
 static inline char* get_clientaddr(struct sockaddr_storage* source_addr)

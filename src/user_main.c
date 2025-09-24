@@ -144,6 +144,14 @@ size_t xPortGetFreeHeapSize()
 {
 	return sram_free_heap_size();
 }
+#elif PLATFORM_RDA5981
+#include "hal/api/mbed_stats.h"
+size_t xPortGetFreeHeapSize()
+{
+	mbed_stats_heap_t heap_stats;
+	mbed_stats_heap_get(&heap_stats);
+	return heap_stats.max_size - heap_stats.current_size;
+}
 #endif
 
 #if PLATFORM_BL602
@@ -196,7 +204,7 @@ void extended_app_waiting_for_launch2(void) {
 #endif
 
 
-#if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266 || PLATFORM_REALTEK_NEW
+#if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266 || PLATFORM_REALTEK_NEW || PLATFORM_RDA5981
 
 int LWIP_GetMaxSockets() {
 	return 0;
@@ -294,6 +302,38 @@ OSStatus rtos_suspend_thread(beken_thread_t* thread)
 		os_task_suspend2(hdl);
 	}
 	else os_task_suspend2(*thread);
+	return kNoErr;
+}
+
+#elif PLATFORM_RDA5981
+
+OSStatus rtos_create_thread(beken_thread_t* thread,
+	uint8_t priority, const char* name,
+	beken_thread_function_t function,
+	uint32_t stack_size, beken_thread_arg_t arg)
+{
+	OSStatus err = kNoErr;
+
+	*thread = rda_thread_new(name, function, arg, stack_size, priority);
+	if(*thread != NULL)
+	{
+		return 0;
+	}
+	else
+	{
+		printf("Thread create %s - err %i\n", name, err);
+	}
+	return 1;
+}
+
+OSStatus rtos_delete_thread(beken_thread_t* thread)
+{
+	if(thread == NULL)
+	{
+		void* hdl = rda_thread_get_id();
+		rda_thread_delete(hdl);
+	}
+	else rda_thread_delete(*thread);
 	return kNoErr;
 }
 
@@ -1084,7 +1124,7 @@ void QuickTick(void* param)
 #if WINDOWS
 
 #elif PLATFORM_BL602 || PLATFORM_W600 || PLATFORM_W800 || PLATFORM_TR6260 || defined(PLATFORM_REALTEK) || PLATFORM_ECR6600 \
-	|| PLATFORM_ESP8266 || PLATFORM_ESPIDF || PLATFORM_XRADIO || PLATFORM_LN882H || PLATFORM_TXW81X
+	|| PLATFORM_ESP8266 || PLATFORM_ESPIDF || PLATFORM_XRADIO || PLATFORM_LN882H || PLATFORM_TXW81X || PLATFORM_RDA5981
 void quick_timer_thread(void* param)
 {
 	while (1) {
@@ -1104,6 +1144,8 @@ void QuickTick_StartThread(void)
 	xTaskCreate(quick_timer_thread, "quick", QT_STACK_SIZE, NULL, 15, NULL);
 #elif PLATFORM_TXW81X
 	os_task_create("quick", quick_timer_thread, NULL, 15, 0, NULL, QT_STACK_SIZE);
+#elif PLATFORM_RDA5981
+	rda_thread_new("quick", quick_timer_thread, NULL, QT_STACK_SIZE, 15);
 #else
 	OSStatus result;
 
