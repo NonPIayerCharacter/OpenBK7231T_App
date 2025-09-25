@@ -36,12 +36,12 @@ rdaPinMapping_t g_pins[] = {
 	{ "IO25 (D3/TX1)",	GPIO_PIN25,		NULL, NULL },
 	{ "IO26 (A0/RX0)",	GPIO_PIN26,		NULL, NULL },
 	{ "IO27 (A1/TX0)",	GPIO_PIN27,		NULL, NULL },
-	{ "IO14 (A2)",		GPIO_PIN14A,	NULL, NULL },
-	{ "IO15 (A3)",		GPIO_PIN15A,	NULL, NULL },
-	{ "IO16 (A4)",		GPIO_PIN16A,	NULL, NULL },
-	{ "IO17 (A5)",		GPIO_PIN17A,	NULL, NULL },
-	{ "IO18 (A6)",		GPIO_PIN18A,	NULL, NULL },
-	{ "IO19 (A7)",		GPIO_PIN19A,	NULL, NULL },
+	//{ "IO14 (A2)",		GPIO_PIN14A,	NULL, NULL },
+	//{ "IO15 (A3)",		GPIO_PIN15A,	NULL, NULL },
+	//{ "IO16 (A4)",		GPIO_PIN16A,	NULL, NULL },
+	//{ "IO17 (A5)",		GPIO_PIN17A,	NULL, NULL },
+	//{ "IO18 (A6)",		GPIO_PIN18A,	NULL, NULL },
+	//{ "IO19 (A7)",		GPIO_PIN19A,	NULL, NULL },
 	{ "VBAT",			ADC_PIN2,		NULL, NULL },
 };
 

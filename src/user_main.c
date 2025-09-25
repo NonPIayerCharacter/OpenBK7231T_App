@@ -145,14 +145,25 @@ size_t xPortGetFreeHeapSize()
 	return sram_free_heap_size();
 }
 #elif PLATFORM_RDA5981
-//#include "hal/api/mbed_stats.h"
-//extern uint32_t mbed_heap_size;
+#include "hal/api/mbed_stats.h"
+extern uint32_t mbed_heap_size;
 size_t xPortGetFreeHeapSize()
 {
-	//mbed_stats_heap_t heap_stats;
-	//mbed_stats_heap_get(&heap_stats);
-	//return mbed_heap_size - heap_stats.current_size;
-	return 20000;
+	mbed_stats_heap_t heap_stats;
+	mbed_stats_heap_get(&heap_stats);
+	//ADDLOGF_DEBUG("mbed_heap_size: %i\n heap_stats.current_size: %i\nheap_stats.max_size: %i\nheap_stats.total_size: %i\nheap_stats.alloc_cnt: %i\nheap_stats.alloc_fail_cnt: %i\n",
+	//	mbed_heap_size, heap_stats.current_size, heap_stats.max_size, heap_stats.total_size, heap_stats.alloc_cnt, heap_stats.alloc_fail_cnt);
+	return mbed_heap_size - heap_stats.current_size;
+}
+int _kill(int pid, int sig)
+{
+	errno = EINVAL;
+	return -1;
+}
+
+pid_t _getpid()
+{
+	return 1;
 }
 #endif
 
@@ -308,32 +319,48 @@ OSStatus rtos_suspend_thread(beken_thread_t* thread)
 }
 
 #elif PLATFORM_RDA5981
+#include "rt_TypeDef.h"
 
 OSStatus rtos_create_thread(beken_thread_t thread,
 	uint8_t priority, const char* name,
 	beken_thread_function_t function,
 	uint32_t stack_size, beken_thread_arg_t arg)
 {
-	thread = rda_thread_new(name, function, arg, stack_size, priority);
-	if(thread != NULL)
+	osThreadDef_t def;
+	osThreadId     id;
+
+	def.pthread = (os_pthread)function;
+	def.tpriority = osPriorityNormal;
+	def.stacksize = stack_size;
+	def.stack_pointer = malloc(stack_size);
+	if(def.stack_pointer == NULL)
 	{
-		return 0;
+		printf("Error allocating the stack memory");
+		return 1;
 	}
-	else
+	thread = osThreadCreate(&def, arg);
+	if(thread == NULL)
 	{
+		free(def.stack_pointer);
 		printf("Thread create %s - err\n", name);
+		return 1;
 	}
-	return 1;
+	//printf("Thread stack at 0x%lx %lu\n", (uint32_t)def.stack_pointer, stack_size);
+	return 0;
 }
 
 OSStatus rtos_delete_thread(beken_thread_t thread)
 {
 	if(thread == NULL)
 	{
-		void* hdl = rda_thread_get_id();
-		rda_thread_delete(hdl);
+		thread = osThreadGetId();
 	}
-	else rda_thread_delete((osThreadId)thread);
+	P_TCB tcb = rt_tid2ptcb(thread);
+	uint32_t* stk = tcb->stack;
+	if(stk == NULL) printf("rtos_delete_thread stk is null\n");
+	//printf("Freeing stack at 0x%lx %u\n", (uint32_t)stk, tcb->priv_stack);
+	free(stk);
+	osThreadTerminate(thread);
 	return kNoErr;
 }
 

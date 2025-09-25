@@ -126,6 +126,8 @@ exit:
 	arg->isCompleted = true;
 #if PLATFORM_RDA5981
 	arg->thread = NULL;
+	arg->isCompleted = false;
+	arg->fd = INVALID_SOCK;
 	rtos_delete_thread(NULL);
 #else
 	rtos_suspend_thread(NULL);

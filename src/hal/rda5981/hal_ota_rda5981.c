@@ -30,7 +30,9 @@ int http_rest_post_flash(http_request_t* request, int startaddr, int maxaddr)
 		ADDLOG_ERROR(LOG_FEATURE_OTA, "Content-length is 0");
 		goto update_ota_exit;
 	}
-	startaddr = 0x1809C000;
+	startaddr = 0x1807E000;
+	// if compressed ota
+	//startaddr = 0x1809C000;
 	if(rda5981_write_partition_start(startaddr, towrite) != 0)
 	{
 		ret = -1;
