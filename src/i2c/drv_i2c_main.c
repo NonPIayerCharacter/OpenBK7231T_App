@@ -12,7 +12,7 @@
 
 
 
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
 
 #include "i2c_pub.h"
 static I2C_OP_ST i2c_operater;
@@ -35,7 +35,7 @@ void DRV_I2C_Write(byte addr, byte data)
 		Soft_I2C_Stop(&g_softI2C);
 		return;
 	}
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
     i2c_operater.op_addr = addr;
     ddev_write(i2c_hdl, (char*)&data, 1, (UINT32)&i2c_operater);
 #endif
@@ -63,7 +63,7 @@ void DRV_I2C_WriteBytes(byte addr, byte *data, int len) {
 		Soft_I2C_Stop(&g_softI2C);
 		return;
 	}
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
     i2c_operater.op_addr = addr;
     ddev_write(i2c_hdl, (char*)data, len, (UINT32)&i2c_operater);
 #endif
@@ -79,7 +79,7 @@ void DRV_I2C_Read(byte addr, byte *data)
 		Soft_I2C_Stop(&g_softI2C);
 		return;
 	}
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
     i2c_operater.op_addr = addr;
     ddev_read(i2c_hdl, (char*)data, 1, (UINT32)&i2c_operater);
 #endif
@@ -97,14 +97,14 @@ void DRV_I2C_ReadBytes(byte addr, byte *data, int size)
 		Soft_I2C_Stop(&g_softI2C);
 		return;
 }
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
 	i2c_operater.op_addr = addr;
 	ddev_read(i2c_hdl, (char*)data, size, (UINT32)&i2c_operater);
 #endif
 }
 int DRV_I2C_Begin(int dev_adr, int busID) {
 
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
     UINT32 status;
 	UINT32 oflag;
     oflag = I2C_DEF_DIV;
@@ -119,7 +119,7 @@ int DRV_I2C_Begin(int dev_adr, int busID) {
 		Soft_I2C_PreInit(&g_softI2C);
 		return 0;
 	}
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
 	else if(busID == I2C_BUS_I2C1) {
 		i2c_hdl = ddev_open("i2c1", &status, oflag);
 	}
@@ -147,7 +147,7 @@ void DRV_I2C_Close() {
 
 		return;
 	}
-#if PLATFORM_BK7231T
+#if PLATFORM_BK7231T || PLATFORM_BEKEN_NEW
 	ddev_close(i2c_hdl);
 #endif
 }

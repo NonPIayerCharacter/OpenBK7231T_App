@@ -236,6 +236,10 @@ void DRV_DDPSend_AppendInformationToHTTPIndexPage(http_request_t* request);
 void TXW_Cam_Init(void);
 void TXW_Cam_RunEverySecond(void);
 
+void BK_Cam_Init(void);
+void BK_Cam_RunEverySecond(void);
+void BK_Cam_Deinit(void);
+
 #define SM2135_DELAY 4
 
 // Software I2C

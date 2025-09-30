@@ -551,14 +551,21 @@ static driver_t g_drivers[] = {
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"UART to TCP bridge, mainly for WiFi Zigbee coordinators.",
 	//drvdetail:"requires":""}
-	{ "UartTCP",		UART_TCP_Init,		NULL,	NULL, NULL, UART_TCP_Deinit, NULL, NULL, false }
+	{ "UartTCP",		UART_TCP_Init,		NULL,	NULL, NULL, UART_TCP_Deinit, NULL, NULL, false },
 #endif
 #if PLATFORM_TXW81X
 	//drvdetail:{"name":"TXWCAM",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"TXW81X Camera.",
 	//drvdetail:"requires":""}
-	{ "TXWCAM", TXW_Cam_Init, TXW_Cam_RunEverySecond, NULL, NULL, NULL, NULL, NULL, false }
+	{ "TXWCAM", TXW_Cam_Init, TXW_Cam_RunEverySecond, NULL, NULL, NULL, NULL, NULL, false },
+#endif
+#if PLATFORM_BK7252 || PLATFORM_BK7252N
+	//drvdetail:{"name":"BKCAM",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"BK7252(N) Camera.",
+	//drvdetail:"requires":""}
+	{ "BKCAM", BK_Cam_Init, BK_Cam_RunEverySecond, NULL, NULL, BK_Cam_Deinit, NULL, NULL, false },
 #endif
 };
 

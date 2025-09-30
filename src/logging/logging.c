@@ -139,8 +139,13 @@ commandResult_t log_command(const void* context, const char* cmd, const char* ar
 // to get uart.h
 #include "command_line.h"
 
+#if PLATFORM_BK7252N || PLATFORM_BK7252
+int UART_PORT = UART1_PORT;
+int UART_PORT_INDEX = 0;
+#else
 int UART_PORT = UART2_PORT;
 int UART_PORT_INDEX = 1;
+#endif
 
 
 commandResult_t log_port(const void* context, const char* cmd, const char* args, int cmdFlags) {
