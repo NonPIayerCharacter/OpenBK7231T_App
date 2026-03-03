@@ -39,6 +39,7 @@
 
 
 #include "driver/drv_ntp.h"
+#include "driver/drv_mdns.h"
 #include "driver/drv_ssdp.h"
 #include "driver/drv_uart.h"
 
@@ -104,6 +105,7 @@ uint8_t g_StartupDelayOver = 0;
 uint32_t idleCount = 0;
 
 int DRV_SSDP_Active = 0;
+int DRV_MDNS_Active = 0;
 
 #define LOG_FEATURE LOG_FEATURE_MAIN
 
@@ -561,6 +563,9 @@ void Main_OnWiFiStatusChange(int code)
 			if (DRV_SSDP_Active) {
 				ScheduleDriverStart("SSDP", 5);
 				//DRV_SSDP_Restart(); // this kills things
+			}
+			if (DRV_MDNS_Active) {
+				ScheduleDriverStart("MDNS", 5);
 			}
 		}
 #if defined(PLATFORM_LN882H) || PLATFORM_LN8825
@@ -1287,6 +1292,11 @@ void Main_Init_AfterDelay_Unsafe(bool bStartAutoRunScripts) {
 	CMD_Init_Delayed();
 
 	if (bStartAutoRunScripts) {
+#if PLATFORM_BK7231N && ENABLE_DRIVER_MDNS
+		// Default mDNS startup for BK7231N builds.
+		// Driver handles "no wifi yet" case and re-starts on reconnect.
+		ScheduleDriverStart("MDNS", 5);
+#endif
 		if (PIN_FindPinIndexForRole(IOR_IRRecv, -1) != -1 || PIN_FindPinIndexForRole(IOR_IRSend, -1) != -1
 			|| PIN_FindPinIndexForRole(IOR_IRRecv_nPup, -1) != -1) {
 			// start IR driver 5 seconds after boot.  It may affect wifi connect?
