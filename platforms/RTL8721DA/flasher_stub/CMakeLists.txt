@@ -149,10 +149,14 @@ ameba_list_append(private_sources
 	${c_CMPT_FWLIB_DIR}/ram_common/ameba_arch.c
 	${c_CMPT_FWLIB_DIR}/ram_common/ameba_pll.c
 	${c_CMPT_FWLIB_DIR}/ram_common/ameba_ldo.c
+	${c_CMPT_FWLIB_DIR}/ram_km4/ameba_flashclk.c
 	${c_BASEDIR}/component/soc/usrcfg/amebadplus/ameba_bootcfg.c
 	${c_BASEDIR}/component/soc/usrcfg/amebadplus/ameba_flashcfg.c
 	${c_CMPT_SOC_DIR}/hal/src/flash_api.c
 	${c_CMPT_SOC_DIR}/misc/ameba_pmu.c
+	../../../libraries/miniz/miniz.c
+	../../../libraries/miniz/miniz_tdef.c
+	../../../libraries/miniz/miniz_tinfl.c
 )
 
 ameba_list_append(private_sources
@@ -192,8 +196,12 @@ ameba_add_internal_library(flashloader
 
 target_compile_options(
 	${c_MCU_PROJ_CONFIG} INTERFACE
-	-Os
-	-DLFS_NO_DEBUG -DLFS_NO_WARN -DLFS_NO_ERROR -DLFS_NO_ASSERT
+	-Os -Wno-error=type-limits -std=gnu11
+	-DLFS_NO_DEBUG -DLFS_NO_WARN -DLFS_NO_ERROR -DLFS_NO_ASSERT -DNDEBUG
+	-I${CMAKE_CURRENT_SOURCE_DIR}
+#	-DUSE_EXTERNAL_MZCRC
+	-DMINIZ_LITTLE_ENDIAN=1
+	-DMINIZ_USE_UNALIGNED_LOADS_AND_STORES=1
 )
 
 ##########################################################################################

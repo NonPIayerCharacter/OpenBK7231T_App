@@ -5,7 +5,7 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-    EXTENDED_FLOADER_RAM (rwx) : ORIGIN = 0x3000A020, LENGTH = 0x30040000 - 0x3000A020
+    EXTENDED_FLOADER_RAM (rwx) : ORIGIN = 0x3000A020, LENGTH = 0x30030000 - 0x3000A020
 }
 
 /* define common load memory address */

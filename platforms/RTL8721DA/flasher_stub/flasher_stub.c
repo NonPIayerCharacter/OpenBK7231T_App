@@ -11,6 +11,7 @@
 #include "ameba_cache.h"
 #include <vfs.h>
 #include <kv.h>
+#include <../../../libraries/miniz/miniz.h>
 
 #define MAGIC 						0xA5
 #define ACK_MAGIC 					0x5A 
@@ -125,6 +126,7 @@ struct download_t
 #define CAN 0x18
 #define CRC_MODE 'C'
 #define XMODEM_BLOCK_SIZE_1K 1024
+#define XMODEM_BLOCK_SIZE_128 128
 
 uint32_t g_flash_id = 0;
 unsigned int g_flash_size = 0;
@@ -142,7 +144,94 @@ unsigned char cmd_data_buf[CMD_DATA_MAX_LEN] = { 0 };
 int uart_cmd_parser(void);
 
 #ifdef CONFIG_AMEBADPLUS
+#include "sysreg_ldo.h"
 #define SPICCLKSL BIT_LSYS_CKSL_SPIC_XTAL
+void BOOT_SOC_ClkSet(void)
+{
+	u32 Temp;
+	u32 PeriDiV, SramDiv, QspiDiv;
+
+	SocClk_Info_TypeDef pSocClk_Info_temp =
+		//{
+		//	600000000u,
+		//	CORE_VOL_0P9,
+		//	CLKDIV(2),
+		//	CLKDIV(6),
+		//	CLKDIV(4)
+		//};
+	{
+		620000000u,
+		CORE_VOL_0P9,
+		CLKDIV(2),
+		CLKDIV(6),
+		CLKDIV(2)
+	};
+	SocClk_Info_TypeDef* pSocClk_Info = &pSocClk_Info_temp;
+	u32 PllClk = pSocClk_Info->PLL_CLK;
+
+	/*Do not Change Divider in FPGA*/
+	if(SYSCFG_CHIPType_Get() == CHIP_TYPE_FPGA)
+	{
+		Temp = CPU_ClkGet();
+		DelayClkUpdate(Temp);
+		return;
+	}
+
+	// km4:Sram shall be 1:1 or 2:1, sram clk = km4 clk/SramDiv
+	SramDiv = (PllClk / pSocClk_Info->KM4_CKD > SRAM_CLK_LIMIT) ? CLKDIV(2) : CLKDIV(1);
+	PeriDiV = CLKDIV_ROUND_UP(PllClk, PERI_CLK_LIMIT);/*target clk PERI_CLK_LIMIT*/
+	QspiDiv = CLKDIV_ROUND_UP(PllClk, QSPI_CLK_LIMIT);/*target clk QSPI_CLK_LIMIT*/
+
+	/*0. configure core power according user setting */
+	CORE_LDO_Vol_Set(pSocClk_Info->Vol_Type);
+
+	//1. switch clk to XTAL
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKSL_GRP0);
+	Temp = Temp & ~LSYS_MASK_CKSL_LP;	//KM0 XTAL
+	Temp = Temp & ~LSYS_BIT_CKSL_HP;	//KM4 XTAL
+	Temp = Temp & ~LSYS_BIT_CKSL_HPERI;	//hperi XTAL
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKSL_GRP0, Temp);
+	//1.1 update CPU Clk used in DelayUs
+	Temp = CPU_ClkGet();
+	DelayClkUpdate(Temp);
+
+	//2. modify PLL clock
+	PLL_ClkSet(PllClk);
+
+	//3. change ckd
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKD_GRP0);
+	Temp &= ~(LSYS_MASK_CKD_HP | LSYS_MASK_CKD_SRAM);
+	Temp &= ~LSYS_MASK_CKD_LP;
+	Temp &= ~LSYS_MASK_CKD_HPERI;
+	Temp &= ~LSYS_MASK_CKD_QSPI;
+	Temp |= LSYS_CKD_HP(pSocClk_Info->KM4_CKD - 1);
+	Temp |= LSYS_CKD_LP(pSocClk_Info->KM0_CKD - 1);
+	Temp |= LSYS_CKD_SRAM(SramDiv - 1);
+	Temp |= LSYS_CKD_HPERI(PeriDiV - 1);
+	Temp |= LSYS_CKD_QSPI(QspiDiv - 1);
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKD_GRP0, Temp);
+
+	//4. back to pll
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKSL_GRP0);
+	Temp |= LSYS_BIT_CKSL_HP;
+	Temp |= LSYS_BIT_CKSL_HPERI;
+	Temp |= LSYS_CKSL_LP(CLK_KM0_PLL);
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKSL_GRP0, Temp);
+	//4.1 update CPU Clk used in DelayUs
+	Temp = CPU_ClkGet();
+	DelayClkUpdate(Temp);
+
+	PllClk = PLL_ClkGet();
+	u8 flash_speed = Flash_Speed - 1;
+	u8 spic_ckd = CLKDIV_ROUND_UP(PllClk, SPIC_CLK_LIMIT) - 1;
+	flash_speed = MAX(flash_speed, spic_ckd);
+	u32 Km4Clk = PllClk / pSocClk_Info->KM4_CKD;
+	u32 Km0Clk = PllClk / pSocClk_Info->KM0_CKD;
+	RTK_LOGI(NOTAG, "PLL CLK: %lu MHz\n", PllClk / 1000u / 1000);
+	RTK_LOGI(NOTAG, "KM4 CPU CLK: %lu MHz\n", Km4Clk/ 1000u / 1000);
+	RTK_LOGI(NOTAG, "KM0 CPU CLK: %lu MHz\n", Km0Clk/ 1000u / 1000);
+	RTK_LOGI(NOTAG, "FLASH CLK: %lu MHz\n", PllClk / (2 * (flash_speed + 1)) / 1000u / 1000);
+}
 #elif CONFIG_AMEBALITE
 #define SPICCLKSL BIT_LSYS_CKSL_SPIC_LBUS
 u32 IPC_SEMTake(IPC_SEM_IDX SEM_Idx, u32 timeout)
@@ -156,7 +245,152 @@ u32 IPC_SEMFree(IPC_SEM_IDX SEM_Idx)
 	(void)SEM_Idx;
 	return true;
 }
+void BOOT_SOC_ClkSet(void)
+{
+	u32 Temp;
+	u32 PllMClk, PllDClk, PllClk;
+	u32 HbusDiV, EcdsaDiv, CpuDiv, SramDiv;
+	SocClk_Info_TypeDef* pSocClk_Info;
+	RRAM_TypeDef* rram = RRAM_DEV;
+
+	//u32 Boot_Clk_Config_Level = 0;
+	//pSocClk_Info = &SocClk_Info[Boot_Clk_Config_Level];
+
+	SocClk_Info_TypeDef pSocClk_Info_temp =
+	{
+		620000000u,
+		500000000u,
+		CORE_VOL_0P9,
+		CLKDIV(2) | ISPLLM,
+		CLKDIV(2) | ISPLLM
+	};
+	pSocClk_Info = &pSocClk_Info_temp;
+
+	PllMClk = pSocClk_Info->PLLM_CLK;
+	PllDClk = pSocClk_Info->PLLD_CLK;
+	CpuDiv = pSocClk_Info->CPU_CKD & ~ISPLLD;
+
+	if(pSocClk_Info->CPU_CKD & ISPLLD)
+	{
+		PllClk = PllDClk;
+	}
+	else
+	{
+		PllClk = PllMClk;
+	}
+
+	/* Note: for sram, max 240MHz under 1.0v, max 200MHz under 0.9v, and km4:Sram shall be 1:1 or 2:1 */
+	if(pSocClk_Info->Vol_Type == CORE_VOL_0P9)
+	{
+		HbusDiV = CLKDIV_ROUND_UP(PllClk, HBUS_0P9V_CLK_LIMIT);
+		if(PllClk / CpuDiv > SRAM_0P9V_CLK_LIMIT)
+		{
+			SramDiv = CpuDiv * 2;
+		}
+		else
+		{
+			SramDiv = CpuDiv;
+		}
+	}
+	else
+	{
+		HbusDiV = CLKDIV_ROUND_UP(PllClk, HBUS_1P0V_CLK_LIMIT);
+		if(PllClk / CpuDiv > SRAM_1P0V_CLK_LIMIT)
+		{
+			SramDiv = CpuDiv * 2;
+		}
+		else
+		{
+			SramDiv = CpuDiv;
+		}
+	}
+
+	EcdsaDiv = CLKDIV_ROUND_UP(PllMClk, ECDSA_CLK_LIMIT);/*target clk ECDSA_CLK_LIMIT*/
+
+	//0. configure core power according user setting
+	SWR_CORE_Vol_Set(pSocClk_Info->Vol_Type);
+
+	//1. select clk_lbus
+	CPU_ClkSet_NonOS(CLK_CPU_LBUS);
+
+	//2. gated selected PLL clock output (1-dsp_pll; 0-cpu_pll)
+	PLL_TypeDef* PLL = (PLL_TypeDef*)PLL_BASE;
+	PLL->PLL_CPUPLL_CTRL0 &= ~PLL_BIT_CPUPLL_CK_EN;
+	PLL->PLL_PERIPLL_CTRL0 &= ~PLL_BIT_PERIPLL_CK_EN;
+
+	//3. modify PLL clock
+	PLL_ClkSet(CLK_CPU_MPLL, PllMClk);
+	PLL_ClkSet(CLK_CPU_DPLL, PllDClk);
+	rram->PLLD_Clk_Info = PllDClk;
+
+	//4. Disable km4/kr4/sram divn
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKE_GRP1);
+	Temp &= ~APBPeriph_PLL_CLOCK;
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKE_GRP1, Temp);
+
+	//5. enable DSP/CPU PLL clock output (1-dsp_pll; 0-cpu_pll)
+	PLL->PLL_CPUPLL_CTRL0 |= PLL_BIT_CPUPLL_CK_EN;
+	PLL->PLL_PERIPLL_CTRL0 |= PLL_BIT_PERIPLL_CK_EN;
+
+	//6. change ckd of km4/kr4/sram according to voltage
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKD_GRP0);
+	Temp &= ~(LSYS_MASK_CKD_KM4 | LSYS_MASK_CKD_KR4 | LSYS_MASK_CKD_SRAM);
+	Temp &= ~(LSYS_MASK_CKD_HBUS | LSYS_MASK_CKD_GDMA_AXI);
+	Temp &= ~LSYS_MASK_CKD_PSRAM;
+
+	Temp |= LSYS_CKD_KM4(CpuDiv - 1) | LSYS_CKD_KR4(CpuDiv - 1) | LSYS_CKD_SRAM(SramDiv - 1);
+	Temp |= LSYS_CKD_HBUS(HbusDiV - 1) | LSYS_CKD_GDMA_AXI(HbusDiV - 1);
+	Temp |= LSYS_CKD_PSRAM(pSocClk_Info->PSRAMC_CKD - 1);
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKD_GRP0, Temp);
+
+	if(pSocClk_Info->PSRAMC_CKD & ISPLLD)
+	{
+		RCC_PeriphClockSource_PSRAM(BIT_LSYS_CKSL_PSRAM_DSPPLL);
+	}
+	else
+	{
+		RCC_PeriphClockSource_PSRAM(BIT_LSYS_CKSL_PSRAM_CPUPLL);
+	}
+
+	/* change ckd of ecdsa */
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKD_GRP1);
+	Temp = (Temp & ~LSYS_MASK_CKD_ECDSA) | LSYS_CKD_ECDSA(EcdsaDiv - 1);
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKD_GRP1, Temp);
+
+	//7. enable km4/kr4/sram divn
+	Temp = HAL_READ32(SYSTEM_CTRL_BASE, REG_LSYS_CKE_GRP1);
+	Temp |= APBPeriph_PLL_CLOCK;
+	HAL_WRITE32(SYSTEM_CTRL_BASE, REG_LSYS_CKE_GRP1, Temp);
+
+	//8. select divn_clk
+	if(pSocClk_Info->CPU_CKD & ISPLLD)
+	{
+		CPU_ClkSet_NonOS(CLK_CPU_DPLL);
+	}
+	else
+	{
+		CPU_ClkSet_NonOS(CLK_CPU_MPLL);
+	}
+
+	PllMClk = PLL_ClkGet(CLK_CPU_MPLL);
+	PllDClk = PLL_ClkGet(CLK_CPU_DPLL);
+	u8 flash_speed = FLASH_CLK_DIV10 - 8;
+	u8 spic_ckd = CLKDIV_ROUND_UP(PllMClk, SPIC_CLK_LIMIT) - 1;
+	flash_speed = MAX(flash_speed, spic_ckd);
+	RTK_LOGI(NOTAG, "PLLM CLK: %lu MHz\n", PllMClk / 1000 / 1000);
+	RTK_LOGI(NOTAG, "PLLD CLK: %lu MHz\n", PllDClk / 1000 / 1000);
+	RTK_LOGI(NOTAG, "KM4 CPU CLK: %lu MHz\n", pSocClk_Info->CPU_CKD & ISPLLD ? PllDClk / CpuDiv / 1000 / 1000 : PllMClk / CpuDiv / 1000 / 1000);
+	RTK_LOGI(NOTAG, "FLASH CLK: %lu MHz\n", PllMClk / (2 * (flash_speed + 1)) / 1000 / 1000);
+}
 #endif
+
+
+//extern u32 crc32_get(u8* buf, int len);
+//mz_ulong mz_crc32(mz_ulong crc, const mz_uint8* ptr, size_t buf_len)
+//{
+//	(void)crc;
+//	return crc32_get((u8*)ptr, (int)buf_len);
+//}
 
 void flasher_stub(void)
 {
@@ -167,22 +401,33 @@ void flasher_stub(void)
 	void sburner_flash_init(void);
 	sburner_flash_init();
 	WDG_Refresh(IWDG_DEV);
+	WDG_Timeout(IWDG_DEV, 0xFFFFFFFF);
+	//WDG_ClearINT(IWDG_DEV, WDG_BIT_EIC);
+	//InterruptRegister((IRQ_FUN)watchdog_irq_handler, IWDG_IRQ, 0, 3);
+	//InterruptEn(IWDG_IRQ, 3);
+	//WDG_INTConfig(IWDG_DEV, WDG_BIT_EIE, ENABLE);
 	InterruptDis(UART_LOG_IRQ);
+	BOOT_SOC_ClkSet();
 
 	RCC_PeriphClockSource_SPIC(SPICCLKSL);
 	FLASH_Read_HandShake_Cmd(0, DISABLE);
 	FLASH_DeepPowerDown(DISABLE);
+	if(SYSCFG_OTP_SPICAddr4ByteEn())
+	{
+		flash_init_para.FLASH_addr_phase_len = ADDR_4_BYTE;
+	}
 #ifdef CONFIG_AMEBADPLUS
 	if (flash_init_para.FLASH_addr_phase_len == ADDR_4_BYTE) {
 		FLASH_Addr4ByteEn();
 	}
 #endif
+	flash_highspeed_setup();
 	RCC_PeriphClockCmd(APBPeriph_SHA, APBPeriph_SHA_CLOCK, ENABLE);
 	RCC_PeriphClockCmd(APBPeriph_LX, APBPeriph_LX_CLOCK, ENABLE);
 	extern HeapRegion_t xHeapRegions[];
 	bool os_heap_add(u8 * start_addr, size_t heap_size);
 	os_heap_add((uint8_t*)0x20000000, (size_t)0xA000);
-	os_heap_add((uint8_t*)0x20050000, (size_t)0x30000);
+	os_heap_add((uint8_t*)0x20030000, (size_t)0x50000);
 	vPortDefineHeapRegions(xHeapRegions);
 	vfs_init();
 	vfs_user_register(VFS_PREFIX, VFS_LITTLEFS, VFS_INF_FLASH, VFS_REGION_1, VFS_RW);
@@ -216,8 +461,6 @@ void FLASH_EraseXIP(u32 EraseType, u32 Address)
 
 int FLASH_ReadStream(u32 address, u32 len, u8* pbuf)
 {
-	assert_param(pbuf != NULL);
-
 	_memcpy(pbuf, (const void*)(SPI_FLASH_BASE + address), len);
 
 	return 1;
@@ -275,10 +518,11 @@ void uart_putc(char ch)
 	while(!LOGUART_Writable());
 	LOGUART_WaitTx();
 	LOGUART_DEV->LOGUART_UART_THRx[LOG_UART_IDX_FLAG[SYS_CPUID()].idx] = ch;
-	//LOGUART_WaitTxComplete();
+	LOGUART_WaitTxComplete();
 #else
 	LOGUART_WaitTxComplete();
 	LOGUART_DEV->LOGUART_UART_THRx[0] = ch;
+	LOGUART_WaitTxComplete();
 #endif
 }
 
@@ -367,19 +611,35 @@ void sburner_flash_init(void)
 	unsigned char id = (g_flash_id >> 16) & 0xff;
 	switch(id)
 	{
+		case 0x13:
+		case 0x33:
+			g_flash_size = 0x80000; break;
+		case 0x14:
+		case 0x34:
+			g_flash_size = 0x100000; break;
 		case 0x15:
+		case 0x35:
 			g_flash_size = 0x200000; break;
 		default:
 		case 0x16:
+		case 0x36:
 			g_flash_size = 0x400000; break;
 		case 0x17:
+		case 0x37:
 			g_flash_size = 0x800000; break;
 		case 0x18:
+		case 0x38:
 			g_flash_size = 0x1000000; break;
 		case 0x19:
+		case 0x39:
 			g_flash_size = 0x2000000; break;
-		case 0x20:
+		case 0x1A:
+		case 0x3A:
 			g_flash_size = 0x4000000; break;
+		case 0x1B:
+			g_flash_size = 0x8000000; break;
+		case 0x1C:
+			g_flash_size = 0x10000000; break;
 	}
 }
 
@@ -561,15 +821,20 @@ void uboot_flash_xmodem_dl(void* buf)
 	//LOGUART_SetBaud(LOGUART_DEV, 115200);
 }
 
-void uboot_flash_xmodem_ul(void* buf)
+void uboot_flash_xmodem_ul(bool isRaw, void* buf)
 {
 	uint8_t block_num = 1;
-	uint8_t data[XMODEM_BLOCK_SIZE_1K];
 	uint8_t resp = 0;
 	uint32_t offset = 0;
-	int retry, ret;
+	int retry;
+	int ret;
+	bool use_1k = true;
+	bool use_crc = true;
+
+	uint8_t packet[3 + XMODEM_BLOCK_SIZE_1K + 2];
 	struct load_cfg_msg cfg_msg;
 	struct message_rec_head* msg = (struct message_rec_head*)buf;
+
 	ACK_msg.status = STATUS_SUCCESS;
 	ACK_msg.magic = ACK_MAGIC;
 	ACK_msg.type = msg->type;
@@ -581,74 +846,389 @@ void uboot_flash_xmodem_ul(void* buf)
 
 	uart_write((unsigned char*)&ACK_msg, ACK_SIZE);
 
-	// wait for 'C'
-	do
+	int timeout = 10000;
+	while(timeout > 0)
 	{
-		if(uart_getc(&resp, 1000) != 0)
-			continue;
-	} while(resp != CRC_MODE);
+		if(uart_getc(&resp, 100) == 0)
+		{
+			if(resp == CRC_MODE)
+			{
+				use_crc = true;
+				use_1k = true;
+				break;
+			}
+			else if(resp == NAK)
+			{
+				use_crc = false;
+				use_1k = false;
+				break;
+			}
+			else if(resp == CAN)
+			{
+				return;
+			}
+		}
+
+		timeout -= 100;
+	}
+
+	if(timeout <= 0)
+	{
+		uart_putc(CAN);
+		uart_putc(CAN);
+		return;
+	}
 
 	while(data_len > 0)
 	{
-		uint32_t chunk = (data_len > XMODEM_BLOCK_SIZE_1K) ? XMODEM_BLOCK_SIZE_1K : data_len;
-		memset(data, 0xFF, XMODEM_BLOCK_SIZE_1K); // pad with 0xFF
+		uint32_t block_size;
+		uint8_t header;
 
-		FLASH_ReadStream(cfg_msg.addr + offset, chunk, data);
+		if(use_1k)
+		{
+			block_size = XMODEM_BLOCK_SIZE_1K;
+			header = STX;
+		}
+		else
+		{
+			block_size = 128;
+			header = SOH;
+		}
 
-		uint16_t crc = crc16_ccitt(data, XMODEM_BLOCK_SIZE_1K);
+		uint32_t chunk = (data_len >= block_size) ? block_size : data_len;
 
 		retry = 0;
-		do
+		while(retry < 10)
 		{
-			uart_putc(STX);
-			uart_putc(block_num);
-			uart_putc(~block_num);
+			memset(packet, 0xFF, sizeof(packet));
 
-			for(uint16_t i = 0; i < XMODEM_BLOCK_SIZE_1K; i++)
-				uart_putc(data[i]);
+			packet[0] = header;
+			packet[1] = block_num;
+			packet[2] = ~block_num;
 
-			uart_putc((crc >> 8) & 0xFF);
-			uart_putc(crc & 0xFF);
+			_memcpy(&packet[3], (const void*)((isRaw == false ? SPI_FLASH_BASE : 0) + cfg_msg.addr + offset), chunk);
+
+			if(chunk < block_size)
+			{
+				memset(&packet[3 + chunk], 0xFF, block_size - chunk);
+			}
+
+			uint32_t pkt_len = 3 + block_size;
+			if(use_crc)
+			{
+				uint16_t crc = crc16_ccitt(&packet[3], block_size);
+				packet[pkt_len++] = (crc >> 8) & 0xff;
+				packet[pkt_len++] = crc & 0xff;
+			}
+			else
+			{
+				uint8_t sum = 0;
+				for(uint32_t i = 0; i < block_size; ++i)
+				{
+					sum += packet[3 + i];
+				}
+				packet[pkt_len++] = sum;
+			}
+
+			uart_write(packet, pkt_len);
 
 			ret = uart_getc(&resp, 5000);
 			if(ret == 0 && resp == ACK)
+			{
 				break;
+			}
 
-			retry++;
-		} while(retry < 50);
+			if(ret == 0 && resp == CAN)
+			{
+				if(uart_getc(&resp, 1000) == 0 && resp == CAN)
+				{
+					return;
+				}
+			}
 
-		if(retry >= 50)
+			++retry;
+		}
+
+		if(use_1k && retry >= 7)
+		{
+			use_1k = false;
+		}
+
+		if(retry >= 10)
 		{
 			uart_putc(CAN);
 			uart_putc(CAN);
+			LOGUART_SetBaud(LOGUART_DEV, 115200);
 			return;
 		}
 
 		offset += chunk;
 		data_len -= chunk;
-		block_num++;
+		++block_num;
 	}
 
 	retry = 0;
-	do
+	while(retry < 10)
+	{
+		uart_putc(EOT);
+
+		ret = uart_getc(&resp, 5000);
+		if(ret == 0 && resp == ACK)
+		{
+			return;
+		}
+		++retry;
+	}
+
+	uart_putc(CAN);
+	uart_putc(CAN);
+}
+
+int mz_deflateInit3(mz_streamp pStream, int level, int method, int window_bits, int mem_level, int strategy)
+{
+	tdefl_compressor* pComp;
+	mz_uint comp_flags = tdefl_create_comp_flags_from_zip_params(level, window_bits, strategy);
+
+	if(!pStream)
+		return MZ_STREAM_ERROR;
+	if((method != MZ_DEFLATED) || ((mem_level < 1) || (mem_level > 9)) || ((window_bits != MZ_DEFAULT_WINDOW_BITS) && (-window_bits != MZ_DEFAULT_WINDOW_BITS)))
+		return MZ_PARAM_ERROR;
+
+	pStream->data_type = 0;
+	pStream->adler = 0;
+	pStream->msg = NULL;
+	pStream->reserved = 0;
+	pStream->total_in = 0;
+	pStream->total_out = 0;
+	if(!pStream->zalloc)
+		pStream->zalloc = miniz_def_alloc_func;
+	if(!pStream->zfree)
+		pStream->zfree = miniz_def_free_func;
+
+	pComp = (tdefl_compressor*)pStream->zalloc(pStream->opaque, 1, sizeof(tdefl_compressor));
+	if(!pComp)
+		return MZ_MEM_ERROR;
+
+	pStream->state = (struct mz_internal_state*)pComp;
+
+	if(tdefl_init(pComp, NULL, NULL, comp_flags) != TDEFL_STATUS_OKAY)
+	{
+		mz_deflateEnd(pStream);
+		return MZ_PARAM_ERROR;
+	}
+
+	return MZ_OK;
+}
+
+void uboot_flash_xmodem_ul_z(void* buf)
+{
+	uint8_t block_num = 1;
+	uint8_t resp = 0;
+	int retry;
+	int ret;
+	bool use_1k = true;
+	bool use_crc = true;
+
+	uint8_t packet[3 + XMODEM_BLOCK_SIZE_1K + 2];
+
+	struct load_cfg_msg cfg_msg;
+	struct message_rec_head* msg = (struct message_rec_head*)buf;
+
+	ACK_msg.status = STATUS_SUCCESS;
+	ACK_msg.magic = ACK_MAGIC;
+	ACK_msg.type = msg->type;
+	ACK_msg.data_len = 0x0000;
+	ACK_msg.CRC8 = uboot_mesage_check((unsigned char*)&ACK_msg, ACK_SIZE - 1);
+
+	uint8_t comp_level = cmd_data_buf[HEAD_SIZE + CFG_SIZE];
+	if(comp_level < 1 || comp_level > 10) comp_level = 5;
+
+	_memcpy(&cfg_msg, &(cmd_data_buf[HEAD_SIZE]), CFG_SIZE);
+
+	uart_write((unsigned char*)&ACK_msg, ACK_SIZE);
+
+	int timeout = 10000;
+
+	while(timeout > 0)
+	{
+		if(uart_getc(&resp, 1000) == 0)
+		{
+			if(resp == CRC_MODE)
+			{
+				use_crc = true;
+				use_1k = true;
+				break;
+			}
+
+			if(resp == NAK)
+			{
+				use_crc = false;
+				use_1k = false;
+				break;
+			}
+
+			if(resp == CAN) return;
+		}
+
+		timeout -= 1000;
+	}
+
+	if(timeout <= 0)
+	{
+		uart_putc(CAN);
+		uart_putc(CAN);
+		return;
+	}
+
+	z_stream stream;
+
+	memset(&stream, 0, sizeof(stream));
+
+	const uint8_t* src = (const uint8_t*)(SPI_FLASH_BASE + cfg_msg.addr);
+
+	uint32_t remaining = cfg_msg.len;
+
+	if(mz_deflateInit3(&stream, comp_level, MZ_DEFLATED, -MZ_DEFAULT_WINDOW_BITS, 9, MZ_DEFAULT_STRATEGY) != Z_OK)
+	{
+		return;
+	}
+
+	bool finished = false;
+
+	while(!finished)
+	{
+		uint32_t block_size;
+		uint8_t header;
+
+		if(use_1k)
+		{
+			block_size = XMODEM_BLOCK_SIZE_1K;
+			header = STX;
+		}
+		else
+		{
+			block_size = 128;
+			header = SOH;
+		}
+
+		memset(packet, 0xFF, sizeof(packet));
+
+		packet[0] = header;
+		packet[1] = block_num;
+		packet[2] = ~block_num;
+
+		stream.next_out = &packet[3];
+		stream.avail_out = block_size;
+
+		while(stream.avail_out)
+		{
+			if(stream.avail_in == 0 && remaining)
+			{
+				uint32_t n = remaining;
+
+				if(n > block_size) n = block_size;
+
+				stream.next_in = (unsigned char*)(src + (cfg_msg.len - remaining));
+
+				stream.avail_in = n;
+
+				remaining -= n;
+			}
+
+			WDG_Refresh(IWDG_DEV);
+
+			ret = deflate(&stream, remaining ? Z_NO_FLUSH : Z_FINISH);
+
+			WDG_Refresh(IWDG_DEV);
+
+			if(ret == Z_STREAM_END)
+			{
+				finished = true;
+				break;
+			}
+
+			if(ret != Z_OK)
+			{
+				deflateEnd(&stream);
+				return;
+			}
+		}
+
+		uint32_t pkt_len = 3 + block_size;
+
+		if(use_crc)
+		{
+			uint16_t crc = crc16_ccitt(&packet[3], block_size);
+
+			packet[pkt_len++] = crc >> 8;
+			packet[pkt_len++] = crc & 0xff;
+		}
+		else
+		{
+			uint8_t sum = 0;
+
+			for(uint32_t i = 0; i < block_size; i++)
+			{
+				sum += packet[3 + i];
+			}
+
+			packet[pkt_len++] = sum;
+		}
+
+		retry = 0;
+
+		while(retry < 10)
+		{
+			uart_write(packet, pkt_len);
+
+			ret = uart_getc(&resp, 5000);
+
+			if(ret == 0 && resp == ACK)
+			{
+				break;
+			}
+
+			retry++;
+		}
+
+		//if(use_1k && retry >= 7)
+		//{
+		//	use_1k = false;
+		//}
+
+		if(retry >= 10)
+		{
+			deflateEnd(&stream);
+
+			uart_putc(CAN);
+			uart_putc(CAN);
+
+			return;
+		}
+
+		block_num++;
+	}
+
+	deflateEnd(&stream);
+
+	retry = 0;
+
+	while(retry < 10)
 	{
 		uart_putc(EOT);
 
 		ret = uart_getc(&resp, 5000);
 
 		if(ret == 0 && resp == ACK)
-			break;
+		{
+			return;
+		}
 
 		retry++;
-	} while(retry < 10);
-
-	if(retry >= 10)
-	{
-		uart_putc(CAN);
-		uart_putc(CAN);
 	}
 
-	return;
+	uart_putc(CAN);
+	uart_putc(CAN);
 }
 
 void uboot_flash_sha256(void* buf)
@@ -783,19 +1363,193 @@ void uboot_kv_set(void* buf)
 	rt_kv_set(kvname, &cmd_data_buf, datasize);
 }
 
-void uboot_get_mac(void)
+void uboot_flash_xmodem_dl_z(void* buf)
 {
-	struct message_rec_head* msg = (struct message_rec_head*)cmd_data_buf;
+	uint8_t header[3] = { 0x00 };
+	uint8_t data[XMODEM_BLOCK_SIZE_1K] = { 0xFF };
+	uint8_t crc_bytes[2] = { 0x00 };
+	uint16_t crc_calc, crc_recv;
+	uint32_t flash_offset = 0;
+	struct load_cfg_msg cfg_msg;
+	struct message_rec_head* msg = (struct message_rec_head*)buf;
+
+	ACK_msg.status = STATUS_SUCCESS;
 	ACK_msg.magic = ACK_MAGIC;
 	ACK_msg.type = msg->type;
-	ACK_msg.status = STATUS_SUCCESS;
+	ACK_msg.data_len = 0x0000;
 	ACK_msg.CRC8 = uboot_mesage_check((unsigned char*)&ACK_msg, ACK_SIZE - 1);
-	ACK_msg.data_len = 6;
-	_memcpy(cmd_data_buf, &ACK_msg, HEAD_SIZE);
-	OTP_LogicalMap_Read(&cmd_data_buf[HEAD_SIZE], 0x11A, 6);
-	cmd_data_buf[HEAD_SIZE + 6] = STATUS_SUCCESS;
-	cmd_data_buf[HEAD_SIZE + 6 + 1] = uboot_mesage_check((unsigned char*)cmd_data_buf, HEAD_SIZE + 6 + 1);
-	uart_write((unsigned char*)cmd_data_buf, HEAD_SIZE + 6 + 2);
+
+	memcpy(&cfg_msg, &(cmd_data_buf[HEAD_SIZE]), CFG_SIZE);
+
+	if((cfg_msg.addr + cfg_msg.len) > g_flash_size)
+	{
+		ACK_msg.status = STATUS_ADDR_ERROR;
+		ACK_msg.CRC8 = uboot_mesage_check((unsigned char*)&ACK_msg, ACK_SIZE - 1);
+		uart_write((unsigned char*)&ACK_msg, ACK_SIZE);
+		return;
+	}
+
+	uart_write((unsigned char*)&ACK_msg, ACK_SIZE);
+
+	FLASH_EraseByLength(cfg_msg.addr, cfg_msg.len);
+
+	mz_stream stream;
+	memset(&stream, 0, sizeof(stream));
+	if(mz_inflateInit2(&stream, -MZ_DEFAULT_WINDOW_BITS) != MZ_OK)
+	{
+		ACK_msg.status = STATUS_ERROR;
+		uart_write((unsigned char*)&ACK_msg, ACK_SIZE);
+		return;
+	}
+
+	uart_putc(CRC_MODE);
+
+	flash_offset = cfg_msg.addr;
+
+	for(;;)
+	{
+		uint32_t data_size = 0;
+
+		if(uart_getc(&header[0], 3333) != 0)
+		{
+			uart_putc(CRC_MODE);
+			continue;
+		}
+
+		if(header[0] == EOT)
+		{
+			stream.next_in = NULL;
+			stream.avail_in = 0;
+
+			while(1)
+			{
+				stream.next_out = cmd_data_buf;
+				stream.avail_out = sizeof(cmd_data_buf);
+
+				int status = mz_inflate(&stream, MZ_NO_FLUSH);
+				uint32_t produced = sizeof(cmd_data_buf) - stream.avail_out;
+
+				if(produced > 0)
+				{
+					if((flash_offset + produced) > (cfg_msg.addr + cfg_msg.len))
+					{
+						goto abort_decompression;
+					}
+
+					FLASH_WriteStream(flash_offset, produced, cmd_data_buf);
+					flash_offset += produced;
+				}
+
+				if(status == MZ_STREAM_END) break;
+
+				if(status != MZ_OK && status != MZ_BUF_ERROR)
+					goto abort_decompression;
+			}
+
+			mz_inflateEnd(&stream);
+
+			uart_putc(ACK);
+			return;
+		}
+
+		if(header[0] != STX && header[0] != SOH)
+		{
+			uart_putc(NAK);
+			continue;
+		}
+
+		data_size = (header[0] == STX) ? XMODEM_BLOCK_SIZE_1K : XMODEM_BLOCK_SIZE_128;
+
+		uart_getc(&header[1], 10000);
+		uart_getc(&header[2], 10000);
+
+		if((header[1] + header[2]) != 0xFF)
+		{
+			uart_putc(NAK);
+			continue;
+		}
+
+		for(uint32_t i = 0; i < data_size; i++)
+			uart_getc(&data[i], 20000);
+
+		uart_getc(&crc_bytes[0], 10000);
+		uart_getc(&crc_bytes[1], 10000);
+
+		crc_recv = ((uint16_t)crc_bytes[0] << 8) | crc_bytes[1];
+		crc_calc = crc16_ccitt(data, data_size);
+
+		if(crc_recv != crc_calc)
+		{
+			uart_putc(NAK);
+			continue;
+		}
+
+		stream.next_in = data;
+		stream.avail_in = data_size;
+
+		while(stream.avail_in > 0)
+		{
+			stream.next_out = cmd_data_buf;
+			stream.avail_out = sizeof(cmd_data_buf);
+
+			int status = mz_inflate(&stream, MZ_NO_FLUSH);
+			uint32_t produced = sizeof(cmd_data_buf) - stream.avail_out;
+
+			if(produced > 0)
+			{
+				if((flash_offset + produced) > (cfg_msg.addr + cfg_msg.len))
+				{
+					goto abort_decompression;
+				}
+
+				FLASH_WriteStream(flash_offset, produced, cmd_data_buf);
+				flash_offset += produced;
+			}
+
+			if(status == MZ_STREAM_END) break;
+
+			if(status != MZ_OK && status != MZ_BUF_ERROR)
+				goto abort_decompression;
+		}
+
+		uart_putc(ACK);
+	}
+
+abort_decompression:
+	mz_inflateEnd(&stream);
+
+	uart_putc(CAN);
+	uart_putc(CAN);
+}
+
+void uboot_read_efuse(void)
+{
+	ACK_msg.magic = ACK_MAGIC;
+	ACK_msg.type = 0x99;
+	ACK_msg.data_len = OTP_LMAP_LEN;
+
+	memcpy(cmd_data_buf, &ACK_msg, HEAD_SIZE);
+
+	OTP_LogicalMap_Read(&cmd_data_buf[HEAD_SIZE], 0, OTP_LMAP_LEN);
+
+	cmd_data_buf[HEAD_SIZE + ACK_msg.data_len] = STATUS_SUCCESS;
+	cmd_data_buf[HEAD_SIZE + ACK_msg.data_len + 1] = uboot_mesage_check((unsigned char*)cmd_data_buf, HEAD_SIZE + ACK_msg.data_len + 1);
+	uart_write((unsigned char*)cmd_data_buf, HEAD_SIZE + ACK_msg.data_len + 2);
+}
+
+void uboot_read_otp(void)
+{
+	ACK_msg.magic = ACK_MAGIC;
+	ACK_msg.type = 0x99;
+	ACK_msg.data_len = 0x400;
+
+	memcpy(cmd_data_buf, &ACK_msg, HEAD_SIZE);
+
+	FLASH_RxData(0x48, 0, 0x400, cmd_data_buf + HEAD_SIZE);
+
+	cmd_data_buf[HEAD_SIZE + 0x400] = STATUS_SUCCESS;
+	cmd_data_buf[HEAD_SIZE + 0x400 + 1] = uboot_mesage_check((unsigned char*)cmd_data_buf, HEAD_SIZE + 0x400 + 1);
+	uart_write((unsigned char*)cmd_data_buf, HEAD_SIZE + 0x400 + 2);
 }
 
 int uart_cmd_parser(void)
@@ -885,7 +1639,7 @@ int uart_cmd_parser(void)
 				uboot_flash_xmodem_dl(&cmd_data_buf);
 				break;
 			case 0x92:
-				uboot_flash_xmodem_ul(&cmd_data_buf);
+				uboot_flash_xmodem_ul(false, &cmd_data_buf);
 				break;
 			case 0x93:
 				uboot_kv_get(&cmd_data_buf);
@@ -893,8 +1647,17 @@ int uart_cmd_parser(void)
 			case 0x94:
 				uboot_kv_set(&cmd_data_buf);
 				break;
-			case 0x95:
-				uboot_get_mac();
+			case 0x96:
+				uboot_flash_xmodem_ul_z(&cmd_data_buf);
+				break;
+			case 0x97:
+				uboot_flash_xmodem_dl_z(&cmd_data_buf);
+				break;
+			case 0x98:
+				uboot_flash_xmodem_ul(true, &cmd_data_buf);
+				break;
+			case 0x99:
+				uboot_read_efuse();
 				break;
 
 			default:

@@ -93,3 +93,7 @@
 	path = sdk/OpenGD32VW553
 	url = https://github.com/NonPIayerCharacter/OpenGD32VW553
 	branch = main
+[submodule "libraries/miniz"]
+	path = libraries/miniz
+	url = https://github.com/richgel999/miniz.git
+	branch = master
