@@ -60,7 +60,6 @@ SOURCES += $(OBK_SRCS)driver/drv_timed_events.c
 SOURCES += $(OBK_SRCS)driver/drv_uart.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_adc_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_flashConfig_opl1000.c
-SOURCES += $(OBK_SRCS)hal/opl1000/hal_fim_config_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_flashVars_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_generic_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_hwtimer_opl1000.c
@@ -83,6 +82,12 @@ SOURCES += $(OBK_SRCS)new_common.c
 SOURCES += $(OBK_SRCS)new_pins.c
 SOURCES += $(OBK_SRCS)rgb2hsv.c
 SOURCES += $(OBK_SRCS)tiny_crc8.c
+
+SOURCES += $(OBK_ROOT)/libraries/easyflash/src/easyflash.c
+SOURCES += $(OBK_ROOT)/libraries/easyflash/src/ef_env.c
+SOURCES += $(OBK_ROOT)/libraries/easyflash/src/ef_utils.c
+SOURCES += $(OBK_ROOT)/libraries/easyflash/ports/ef_port.c
+SOURCES += heap_5.c
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(notdir $(SOURCES:.c=.o)))
 VPATH := $(sort $(dir $(SOURCES)))
@@ -151,6 +156,7 @@ INCLUDES += $(shell find \
     ! -path "*/FreeRtos/Source/portable/RVDS*" \
     ! -path "*/FreeRtos/Source/portable/IAR*" \
     | sed 's#^#-I #')
+INCLUDES += -I $(OBK_ROOT)/libraries/easyflash/inc
 
 CFLAGS  := -mthumb -mcpu=cortex-m3 -mlittle-endian
 CFLAGS  += -std=gnu99 -Os
@@ -186,10 +192,12 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "compile_c $@"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/$(OUTPUT_BASENAME).elf: $(OBJECTS) $(PATCH_LIB) $(LINK_SCRIPT) $(SYMDEFS)
-	$(CC) -o $@ $(LDFLAGS) $(CFLAGS) $(OBJECTS) $(PATCH_LIB)
+	@echo "link $@"
+	@$(CC) -o $@ $(LDFLAGS) $(CFLAGS) $(OBJECTS) $(PATCH_LIB)
 	$(SIZE) $@
 
 $(BUILD_DIR)/$(OUTPUT_BASENAME)_main.bin: $(BUILD_DIR)/$(OUTPUT_BASENAME).elf

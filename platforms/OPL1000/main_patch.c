@@ -16,11 +16,8 @@
 #include "sys_init.h"
 #include "sys_init_patch.h"
 #include "sys_os_config.h"
-#include "hal_fim_config_opl1000.h"
 
 static E_IO01_UART_MODE s_io01UartMode;
-
-#define OPENOPL1000_SHM_CODE __attribute__((section(".shm_text"), noinline, used, long_call))
 
 #ifndef OPENOPL1000_BOOT_TRACE
 #define OPENOPL1000_BOOT_TRACE 0
@@ -43,7 +40,6 @@ static void OpenOPL1000_PrintRamLayout(void);
 #endif
 static void OpenOPL1000_OpenBekenTask(void *args);
 static void OpenOPL1000_EarlyLog(const char *text);
-static uint32_t OpenOPL1000_ShmProbeFn(uint32_t value) OPENOPL1000_SHM_CODE;
 
 void __wrap_wpa_cli_func_init_patch(void);
 void __wrap_at_func_init_patch(void);
@@ -78,19 +74,6 @@ extern uint32_t g_u32IpcWifiBssInfoAddr;
 extern uint32_t g_u32IpcWifiDbgParamAddr;
 extern uint32_t g_u32IpcWifiStaInfoAddr;
 extern uint32_t g_u32IpcPsConfAddr;
-
-static uint32_t OpenOPL1000_ShmProbeFn(uint32_t value)
-{
-    /* Tiny split-M3 probe.  Keep this deliberately self-contained: no strings,
-     * no SDK calls, no static locals.  If it is actually loaded at the configured SHM tail address,
-     * calling it from normal patch RAM proves the second M3 image is present
-     * and executable.
-     */
-    value ^= 0xA55A5AA5u;
-    value += 0x12345678u;
-    value ^= 0x0F0F0F0Fu;
-    return value;
-}
 
 void __wrap_wpa_cli_func_init_patch(void)
 {
@@ -167,7 +150,6 @@ void __Patch_EntryPoint(void)
 #endif
 
     Hal_SysPinMuxAppInit = Main_PinMuxUpdate;
-    MwFim_FlashLayoutUpdate = Main_FlashLayoutUpdate;
     Sys_MiscModulesInit = Main_MiscModulesInit;
     Sys_MiscDriverConfigSetup = Main_MiscDriverConfigSetup;
     Sys_ServiceInit = Main_ServiceInitNoBle;
@@ -175,6 +157,7 @@ void __Patch_EntryPoint(void)
 
     Sys_SetUnsuedSramEndBound(0x440000);
     Sys_AppInit = Main_AppInit_patch;
+    vPortInitialiseBlocks_obk();
 }
 
 static void Main_PinMuxUpdate(void)
@@ -206,11 +189,6 @@ static void Main_PinMuxUpdate(void)
 
     s_io01UartMode = HAL_PIN_0_1_UART_MODE;
     at_io01_uart_mode_set(HAL_PIN_0_1_UART_MODE);
-}
-
-static void Main_FlashLayoutUpdate(void)
-{
-    OpenOPL1000_FimRegister();
 }
 
 static void Main_ServiceInitNoBle(void)
@@ -413,6 +391,7 @@ static void OpenOPL1000_OpenBekenTask(void *args)
     {
         osDelay(1000);
         Main_OnEverySecond();
+        vVmpInfoDump();
     }
 }
 
@@ -446,13 +425,6 @@ static void Main_AppInit_patch(void)
            (unsigned int)((resetStatus & RESET_BY_SPOR) != 0));
     Hal_Sys_ResetStatusClear(resetStatus);
 #if OPENOPL1000_BOOT_TRACE
-    {
-        uint32_t shmProbe = OpenOPL1000_ShmProbeFn(0x00000029u);
-        printf("OPL1000 split-M3 v66-log-cleanup: shm_fn=0x%08x result=0x%08x\r\n",
-               (unsigned int)(uintptr_t)OpenOPL1000_ShmProbeFn,
-               (unsigned int)shmProbe);
-    }
-
     OpenOPL1000_PrintRamLayout();
 #endif
 

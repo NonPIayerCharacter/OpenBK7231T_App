@@ -35,11 +35,7 @@ extern uint8_t flash_size_8720;
 
 #define MAX_JSON_VALUE_LENGTH   128
 
-#if PLATFORM_OPL1000
-#define REST_ENABLE_FLASH_API 0
-#else
 #define REST_ENABLE_FLASH_API 1
-#endif
 
 
 int http_rest_error(http_request_t* request, int code, char* msg);

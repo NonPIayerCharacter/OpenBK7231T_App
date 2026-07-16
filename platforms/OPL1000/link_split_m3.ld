@@ -27,7 +27,24 @@ SECTIONS
         KEEP(*(ENTRY_POINT))
     } > IRAM1
 
-    .shm_region ORIGIN(SHM) :
+    ASSERT(__shm_region_end__ <= ORIGIN(SHM) + LENGTH(SHM), "Error: SHM split-M3 region overflow")
+
+    . = ORIGIN(IRAM1) + SIZEOF(.entry);
+
+    .text ALIGN(4) :
+    {
+        __text_start__ = .;
+        *(.text)
+        *(.text*)
+        *(.glue_7)
+        *(.glue_7t)
+        *(.v4_bx)
+        *(.vfp11_veneer)
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+        __text_end__ = .;
+    } > IRAM1
+
+    .shm_region ALIGN(4) :
     {
         __shm_region_start__ = .;
         . = ALIGN(4);
@@ -53,23 +70,6 @@ SECTIONS
         KEEP(*(.shm_bss*))
         . = ALIGN(4);
         __shm_region_end__ = .;
-    } > SHM
-
-    ASSERT(__shm_region_end__ <= ORIGIN(SHM) + LENGTH(SHM), "Error: SHM split-M3 region overflow")
-
-    . = ORIGIN(IRAM1) + SIZEOF(.entry);
-
-    .text ALIGN(4) :
-    {
-        __text_start__ = .;
-        *(.text)
-        *(.text*)
-        *(.glue_7)
-        *(.glue_7t)
-        *(.v4_bx)
-        *(.vfp11_veneer)
-        *(.ARM.extab* .gnu.linkonce.armextab.*)
-        __text_end__ = .;
     } > IRAM1
 
     .rodata ALIGN(4) :

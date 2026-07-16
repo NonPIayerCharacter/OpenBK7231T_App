@@ -1110,11 +1110,15 @@ OSStatus rtos_suspend_thread(beken_thread_t* thread);
 
 typedef unsigned int UINT32;
 
+void* pvPortMalloc_obk(size_t size);
+void vPortFree_obk(void* ptr);
+void* pvPortRealloc_obk(void* ptr, size_t size);
+
 #define ASSERT
 #define bk_printf printf
-#define os_malloc malloc
-#define os_free free
-#define os_realloc realloc
+#define os_malloc pvPortMalloc_obk
+#define os_free vPortFree_obk
+#define os_realloc pvPortRealloc_obk
 
 #ifndef portTICK_PERIOD_MS
 #define portTICK_PERIOD_MS (1000 / configTICK_RATE_HZ)

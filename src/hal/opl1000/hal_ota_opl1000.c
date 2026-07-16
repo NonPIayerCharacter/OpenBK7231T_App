@@ -11,16 +11,6 @@ void otarequest(const char *urlin)
     printf("OTA request ignored for now: %s\r\n", urlin ? urlin : "");
 }
 
-int HAL_FlashRead(char *buffer, int readlen, int startaddr)
-{
-    (void)startaddr;
-    if (buffer && readlen > 0)
-    {
-        memset(buffer, 0xFF, readlen);
-    }
-    return 0;
-}
-
 int http_rest_post_flash(http_request_t* request, int startaddr, int maxaddr)
 {
     (void)request;

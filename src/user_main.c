@@ -191,6 +191,14 @@ pid_t _getpid()
 	return 1;
 }
 
+#elif PLATFORM_OPL1000
+
+size_t xPortGetFreeHeapSize_obk()
+{
+	return xPortGetFreeHeapSize() + xPortGetFreeHeapSize_5();
+}
+#define xPortGetFreeHeapSize xPortGetFreeHeapSize_obk
+
 #endif
 
 #if PLATFORM_BL602 && !PLATFORM_BL_NEW

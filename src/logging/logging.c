@@ -14,12 +14,6 @@
 extern int g_secondsElapsed;
 #endif
 
-#if PLATFORM_OPL1000
-#define OPENOPL1000_SHM_DATA __attribute__((section(".shm_data"), used, aligned(4)))
-#else
-#define OPENOPL1000_SHM_DATA
-#endif
-
 #if PLATFORM_BEKEN
 // to get uart.h
 #include "command_line.h"
@@ -119,16 +113,12 @@ char* logfeaturenames[] = {
     "ERROR",// = 28,
 };
 
-#if PLATFORM_OPL1000
-#define LOGGING_BUFFER_SIZE		384
-#else
 #define LOGGING_BUFFER_SIZE		1024
-#endif
 
 volatile int direct_serial_log = DEFAULT_DIRECT_SERIAL_LOG;
 
 static int g_extraSocketToSendLOG = 0;
-static char g_loggingBuffer[LOGGING_BUFFER_SIZE] OPENOPL1000_SHM_DATA;
+static char g_loggingBuffer[LOGGING_BUFFER_SIZE];
 
 #define MAX_TCP_LOG_PORTS 2
 int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1};
@@ -149,11 +139,7 @@ static void log_serial_thread(beken_thread_arg_t arg);
 static void startSerialLog();
 static void startLogServer();
 
-#if PLATFORM_OPL1000
-#define LOGSIZE 1024
-#else
 #define LOGSIZE 4096
-#endif
 #define LOGPORT 9000
 
 int logTcpPort = LOGPORT;
@@ -168,7 +154,7 @@ static struct tag_logMemory {
 	int taillfs;
 #endif
 	SemaphoreHandle_t mutex;
-} logMemory OPENOPL1000_SHM_DATA;
+} logMemory;
 
 
 static int initialised = 0;
