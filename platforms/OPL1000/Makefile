@@ -42,22 +42,8 @@ OBK_SRCS := $(OBK_ROOT)/src/
 
 SOURCES := main_patch.c
 SOURCES += opl1000_libc.c
-SOURCES += $(OBK_SRCS)user_main.c
-SOURCES += $(OBK_SRCS)base64/base64.c
-SOURCES += $(OBK_SRCS)cJSON/cJSON.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_channels.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_enums.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_eventHandlers.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_if.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_main.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_repeatingEvents.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_tasmota.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_tcp.c
-SOURCES += $(OBK_SRCS)cmnds/cmd_tokenizer.c
-SOURCES += $(OBK_SRCS)driver/drv_deviceclock.c
-SOURCES += $(OBK_SRCS)driver/drv_main.c
-SOURCES += $(OBK_SRCS)driver/drv_timed_events.c
-SOURCES += $(OBK_SRCS)driver/drv_uart.c
+SOURCES += heap_5.c
+SOURCES += $(APS_ROOT)/middleware/third_party/lwip-2.0.3/lwip/src/apps/mqtt/mqtt.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_adc_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_flashConfig_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_flashVars_opl1000.c
@@ -67,27 +53,14 @@ SOURCES += $(OBK_SRCS)hal/opl1000/hal_ota_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_pins_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_uart_opl1000.c
 SOURCES += $(OBK_SRCS)hal/opl1000/hal_wifi_opl1000.c
-SOURCES += $(OBK_SRCS)httpserver/http_basic_auth.c
-SOURCES += $(OBK_SRCS)httpserver/http_fns.c
-SOURCES += $(OBK_SRCS)httpserver/http_tcp_server.c
-SOURCES += $(OBK_SRCS)httpserver/json_interface.c
-SOURCES += $(OBK_SRCS)httpserver/new_http.c
-SOURCES += $(OBK_SRCS)httpserver/new_tcp_server.c
-SOURCES += $(OBK_SRCS)httpserver/rest_interface.c
-SOURCES += $(OBK_SRCS)jsmn/jsmn.c
-SOURCES += $(OBK_SRCS)libraries/obktime/obktime.c
-SOURCES += $(OBK_SRCS)logging/logging.c
-SOURCES += $(OBK_SRCS)new_cfg.c
-SOURCES += $(OBK_SRCS)new_common.c
-SOURCES += $(OBK_SRCS)new_pins.c
-SOURCES += $(OBK_SRCS)rgb2hsv.c
-SOURCES += $(OBK_SRCS)tiny_crc8.c
+
+include $(OBK_ROOT)/platforms/obk_main.mk
+SOURCES += $(OBKM_SRC)
 
 SOURCES += $(OBK_ROOT)/libraries/easyflash/src/easyflash.c
 SOURCES += $(OBK_ROOT)/libraries/easyflash/src/ef_env.c
 SOURCES += $(OBK_ROOT)/libraries/easyflash/src/ef_utils.c
 SOURCES += $(OBK_ROOT)/libraries/easyflash/ports/ef_port.c
-SOURCES += heap_5.c
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(notdir $(SOURCES:.c=.o)))
 VPATH := $(sort $(dir $(SOURCES)))
@@ -164,12 +137,12 @@ CFLAGS  += -ffunction-sections -fdata-sections
 CFLAGS  += -flto -fuse-linker-plugin -fno-fat-lto-objects
 CFLAGS  += -fno-unwind-tables -fno-asynchronous-unwind-tables
 CFLAGS  += -fno-builtin -fno-common -fmessage-length=0
-CFLAGS  += -nostartfiles $(NO_PIE_FLAG) -specs=nosys.specs -ffreestanding
+CFLAGS  += -nostartfiles $(NO_PIE_FLAG) -specs=nosys.specs
 CFLAGS  += -include sys_common.h
 CFLAGS  += -Wall -Wextra
 CFLAGS  += -Wno-implicit-function-declaration -Wno-int-conversion -Wno-unused-parameter
 CFLAGS  += -Wno-missing-field-initializers -Wno-unused-function -Wno-unused-variable
-CFLAGS  += -Wno-pointer-sign -Wno-format -Wno-sign-compare
+CFLAGS  += -Wno-pointer-sign -Wno-format -Wno-sign-compare -Wno-unknown-pragmas
 CFLAGS  += $(DEFS) $(INCLUDES)
 
 LDFLAGS := -mthumb -mcpu=cortex-m3 -mlittle-endian
@@ -201,17 +174,13 @@ $(BUILD_DIR)/$(OUTPUT_BASENAME).elf: $(OBJECTS) $(PATCH_LIB) $(LINK_SCRIPT) $(SY
 	$(SIZE) $@
 
 $(BUILD_DIR)/$(OUTPUT_BASENAME)_main.bin: $(BUILD_DIR)/$(OUTPUT_BASENAME).elf
-	$(OBJCOPY) -O binary --remove-section=.shm_region $< $@
+	$(OBJCOPY) -O binary $< $@
 
-$(BUILD_DIR)/$(OUTPUT_BASENAME)_shm.bin: $(BUILD_DIR)/$(OUTPUT_BASENAME).elf
-	$(OBJCOPY) -O binary --only-section=.shm_region $< $@
-
-package: $(BUILD_DIR)/$(OUTPUT_BASENAME)_main.bin $(BUILD_DIR)/$(OUTPUT_BASENAME)_shm.bin $(M0_IMAGE) $(PATCHDATA_SCRIPT) $(PACK_SCRIPT)
+package: $(BUILD_DIR)/$(OUTPUT_BASENAME)_main.bin $(M0_IMAGE) $(PATCHDATA_SCRIPT) $(PACK_SCRIPT)
 	mkdir -p $(OUTPUT_DIR)
 	mkdir -p $(PACK_STAGE)
 	cp $(PATCHDATA_SCRIPT) $(PACK_STAGE)/PatchData.txt
 	cp $(BUILD_DIR)/$(OUTPUT_BASENAME)_main.bin $(PACK_STAGE)/opl1000_app_m3_main.bin
-	cp $(BUILD_DIR)/$(OUTPUT_BASENAME)_shm.bin $(PACK_STAGE)/opl1000_app_m3_shm.bin
 	$(PYTHON) $(PACK_SCRIPT) --patch-data $(PACK_STAGE)/PatchData.txt --m0-container $(M0_IMAGE) --output $(OUTPUT_DIR)/$(OUTPUT_BASENAME).bin
 	@echo "OpenOPL1000 packed flash image written to $(OUTPUT_DIR)/$(OUTPUT_BASENAME).bin"
 

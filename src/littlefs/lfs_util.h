@@ -56,6 +56,13 @@ extern void* pvPortMalloc(size_t xWantedSize);
 extern void vPortFree(void* pv);
 #define os_malloc pvPortMalloc
 #define os_free vPortFree
+#elif PLATFORM_OPL1000
+void* pvPortMalloc_obk(size_t size);
+void vPortFree_obk(void* ptr);
+void* pvPortRealloc_obk(void* ptr, size_t size);
+#define os_malloc pvPortMalloc_obk
+#define os_free vPortFree_obk
+#define os_realloc pvPortRealloc_obk
 #endif
 
 #ifdef __cplusplus

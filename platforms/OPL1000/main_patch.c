@@ -141,6 +141,12 @@ static void OpenOPL1000_PrintRamLayout(void)
 }
 #endif
 
+void OBK_IdleHook(void)
+{
+    Sys_IdleHook_impl();
+    isidle();
+}
+
 void __Patch_EntryPoint(void)
 {
     SysInit_EntryPoint();
@@ -157,6 +163,7 @@ void __Patch_EntryPoint(void)
 
     Sys_SetUnsuedSramEndBound(0x440000);
     Sys_AppInit = Main_AppInit_patch;
+    Sys_IdleHook = OBK_IdleHook;
     vPortInitialiseBlocks_obk();
 }
 
@@ -386,12 +393,13 @@ static void OpenOPL1000_OpenBekenTask(void *args)
     OpenOPL1000_EarlyLog("\r\nOpenBeken task entered\r\n");
 #endif
     Main_Init();
-
+    uint8_t i = 0;
     while (1)
     {
         osDelay(1000);
         Main_OnEverySecond();
-        vVmpInfoDump();
+        rtos_thread_cleanup();
+        if(i++ > 6) { vVmpInfoDump(); i = 0; }
     }
 }
 
@@ -438,5 +446,166 @@ static void Main_AppInit_patch(void)
     if (osThreadCreate(&threadDef, NULL) == NULL)
     {
         OpenOPL1000_EarlyLog("Failed to create OpenBeken task\r\n");
+    }
+}
+
+#include "new_common.h"
+
+static beken_thread_internal_t* thread_registry = NULL;
+static beken_thread_internal_t* thread_cleanup = NULL;
+
+static void register_thread(beken_thread_internal_t* node)
+{
+    node->next = thread_registry;
+    thread_registry = node;
+}
+
+static void enqueue_cleanup(beken_thread_internal_t* node)
+{
+    node->next = thread_cleanup;
+    thread_cleanup = node;
+}
+
+static beken_thread_internal_t* find_and_remove(TaskHandle_t handle)
+{
+    beken_thread_internal_t** prev = &thread_registry;
+    while(*prev)
+    {
+        if((*prev)->handle == handle)
+        {
+            beken_thread_internal_t* found = *prev;
+            *prev = found->next;
+            return found;
+        }
+        prev = &(*prev)->next;
+    }
+    return NULL;
+}
+
+OSStatus rtos_create_thread(beken_thread_t* thread,
+    uint8_t priority, const char* name,
+    beken_thread_function_t function,
+    uint32_t stack_size, beken_thread_arg_t arg)
+{
+    OSStatus err = kNoErr;
+
+    beken_thread_internal_t* node = (beken_thread_internal_t*)os_malloc(sizeof(beken_thread_internal_t));
+    if(!node) return 1;
+
+    node->stack = (StackType_t*)os_malloc(stack_size);
+    if(!node->stack)
+    {
+        os_free(node);
+        return 1;
+    }
+
+    node->tcb = (StaticTask_t*)os_malloc(sizeof(StaticTask_t));
+    if(!node->tcb)
+    {
+        os_free(node->stack);
+        os_free(node);
+        return 1;
+    }
+
+    TaskHandle_t h = xTaskCreateStatic(function, name, stack_size / sizeof(StackType_t), arg, priority, node->stack, node->tcb);
+
+    if(h == NULL)
+    {
+        os_free(node->stack);
+        os_free(node->tcb);
+        os_free(node);
+        return 1;
+    }
+
+    node->handle = h;
+    taskENTER_CRITICAL();
+    register_thread(node);
+    taskEXIT_CRITICAL();
+    *thread = node;
+
+    return 0;
+}
+
+OSStatus rtos_delete_thread(beken_thread_t* thread)
+{
+    TaskHandle_t handle;
+    bool self_delete;
+
+    if(thread == NULL || *thread == NULL)
+    {
+        handle = xTaskGetCurrentTaskHandle();
+        self_delete = true;
+    }
+    else
+    {
+        handle = (*thread)->handle;
+        self_delete = (handle == xTaskGetCurrentTaskHandle());
+    }
+
+    taskENTER_CRITICAL();
+    beken_thread_internal_t* node = find_and_remove(handle);
+    taskEXIT_CRITICAL();
+
+    if(self_delete)
+    {
+        if(node)
+        {
+            taskENTER_CRITICAL();
+            enqueue_cleanup(node);
+            taskEXIT_CRITICAL();
+        }
+
+        if(thread) *thread = NULL;
+
+        vTaskDelete(NULL);
+
+        while(1);
+    }
+    else
+    {
+        vTaskDelete(handle);
+
+        if(node)
+        {
+            os_free(node->stack);
+            os_free(node->tcb);
+            os_free(node);
+        }
+
+        if(thread) *thread = NULL;
+    }
+
+    return kNoErr;
+}
+
+OSStatus rtos_suspend_thread(beken_thread_t* thread)
+{
+    if(thread == NULL || *thread == NULL)
+    {
+        vTaskSuspend(NULL);
+    }
+    else
+    {
+        vTaskSuspend((*thread)->handle);
+    }
+
+    return kNoErr;
+}
+
+void rtos_thread_cleanup(void)
+{
+    taskENTER_CRITICAL();
+    beken_thread_internal_t* list = thread_cleanup;
+    thread_cleanup = NULL;
+    taskEXIT_CRITICAL();
+
+    while(list)
+    {
+        beken_thread_internal_t* node = list;
+        list = node->next;
+
+        os_free(node->stack);
+        os_free(node->tcb);
+        os_free(node);
     }
 }

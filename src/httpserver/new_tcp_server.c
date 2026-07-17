@@ -10,25 +10,14 @@
 #include "../logging/logging.h"
 #include "../hal/hal_ota.h"
 #include "new_http.h"
-#if PLATFORM_ESP8266
+#if PLATFORM_ESP8266 || PLATFORM_OPL1000
 #define MAX_SOCKETS_TCP 2
 #endif
-#if PLATFORM_ESP8266
+#if PLATFORM_ESP8266 || PLATFORM_OPL1000
 #define REPLY_BUFFER_SIZE			1024
 #define INCOMING_BUFFER_SIZE		1024
-#define HTTP_CLIENT_STACK_SIZE		4096
+//#define HTTP_CLIENT_STACK_SIZE		4096
 #define HTTP_CLIENT_STACK_SIZE		6144
-#endif
-#if PLATFORM_OPL1000
-/*
- * The OPL1000 A2 patch image has very little free RAM once the vendor Wi-Fi,
- * supplicant and controller tasks are running. Keep the first real-port HTTP
- * server small and avoid starting the listener until the STA path has DHCP.
- */
-#define MAX_SOCKETS_TCP            2
-#define REPLY_BUFFER_SIZE          1024
-#define INCOMING_BUFFER_SIZE       768
-#define HTTP_CLIENT_STACK_SIZE     1024
 #endif
 #ifndef MAX_SOCKETS_TCP
 #define MAX_SOCKETS_TCP MEMP_NUM_TCP_PCB
@@ -155,94 +144,6 @@ exit:
 #endif
 }
 
-
-#if PLATFORM_OPL1000
-#include "../hal/hal_wifi.h"
-#include "../cmnds/cmd_public.h"
-
-#define OPENOPL1000_SHM_DATA   __attribute__((section(".shm_data"), used, aligned(4)))
-
-/*
- * v37b builds on v36 and the proven v35/v36 split-M3 layout:
- *   usable application-owned SHM tail: 0x80000400 .. 0x80003fff
- *   avoided vendor/IPC-owned bottom:   0x80000000 .. 0x800003ff
- *
- * Keep the transport path synchronous and single-client, but run the stock
- * OpenBeken HTTP parser.  postany() streams replies when this scratch buffer
- * fills, so OPL1000 does not need a huge per-client reply allocation.
- */
-#define OPL1000_HTTP_REQ_SIZE    1152
-#define OPL1000_HTTP_REPLY_SIZE  1024
-
-/* Keep the live OPL1000 HTTP working set in the split-M3 SHM tail. */
-static char g_opl1000_http_req[OPL1000_HTTP_REQ_SIZE] OPENOPL1000_SHM_DATA = {0};
-static char g_opl1000_http_reply[OPL1000_HTTP_REPLY_SIZE] OPENOPL1000_SHM_DATA = {0};
-static http_request_t g_opl1000_http_request OPENOPL1000_SHM_DATA = {0};
-static struct sockaddr_storage g_opl1000_source_addr OPENOPL1000_SHM_DATA = {0};
-
-static void tcp_client_process_sync(tcp_thread_t* arg)
-{
-	int fd = arg->fd;
-	char *buf = g_opl1000_http_req;
-	http_request_t *request = &g_opl1000_http_request;
-	int lenret = 0;
-
-	memset(request, 0, sizeof(*request));
-	memset(buf, 0, OPL1000_HTTP_REQ_SIZE);
-	memset(g_opl1000_http_reply, 0, OPL1000_HTTP_REPLY_SIZE);
-
-	request->fd = fd;
-	request->received = buf;
-	request->receivedLenmax = OPL1000_HTTP_REQ_SIZE - 2;
-	request->responseCode = HTTP_RESPONSE_OK;
-	request->receivedLen = 0;
-	request->reply = g_opl1000_http_reply;
-	request->replymaxlen = OPL1000_HTTP_REPLY_SIZE - 1;
-	request->replylen = 0;
-
-	while(1)
-	{
-		int remaining = request->receivedLenmax - request->receivedLen;
-		int received = recv(fd, request->received + request->receivedLen, remaining, 0);
-		if(received <= 0)
-		{
-			break;
-		}
-		request->receivedLen += received;
-		request->received[request->receivedLen] = 0;
-		if(strstr(request->received, "\r\n\r\n") != NULL ||
-			strstr(request->received, "\n\n") != NULL ||
-			received < remaining ||
-			request->receivedLen >= request->receivedLenmax)
-		{
-			break;
-		}
-	}
-
-	if(request->receivedLen <= 0)
-	{
-		goto exit;
-	}
-
-	lenret = HTTP_ProcessPacket(request);
-	if(lenret > 0 && request->replylen > 0)
-	{
-		send(fd, request->reply, request->replylen, 0);
-		request->replylen = 0;
-	}
-
-exit:
-	if(fd != INVALID_SOCK)
-	{
-		lwip_close(fd);
-	}
-	arg->fd = INVALID_SOCK;
-	arg->thread = NULL;
-	arg->isCompleted = false;
-}
-
-#endif
-
 static inline char* get_clientaddr(struct sockaddr_storage* source_addr)
 {
 	static char address_str[128];
@@ -360,11 +261,7 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 	}
 	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP, "Socket bound on 0.0.0.0:%i", HTTP_SERVER_PORT);
 
-#if PLATFORM_OPL1000
-	err = listen(listen_sock, 1);
-#else
 	err = listen(listen_sock, 0);
-#endif
 	if(err != 0)
 	{
 		ADDLOG_ERROR(LOG_FEATURE_HTTP, "Error occurred during listen");
@@ -373,13 +270,8 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 	ADDLOG_INFO(LOG_FEATURE_HTTP, "TCP server listening");
 	while(true)
 	{
-#if PLATFORM_OPL1000
-		struct sockaddr_storage *source_addr_ptr = &g_opl1000_source_addr;
-		socklen_t addr_len = sizeof(g_opl1000_source_addr);
-#else
 		struct sockaddr_storage source_addr;
 		socklen_t addr_len = sizeof(source_addr);
-#endif
 
 		int new_idx = 0;
 		for(int i = 0; i < max_socks; ++i)
@@ -404,9 +296,6 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 		}
 		if(new_idx < max_socks)
 		{
-#if PLATFORM_OPL1000
-			sock[new_idx].fd = accept(listen_sock, (struct sockaddr*)source_addr_ptr, &addr_len);
-#else
 			sock[new_idx].fd = accept(listen_sock, (struct sockaddr*)&source_addr, &addr_len);
 
 #if LWIP_SO_RCVTIMEO
@@ -419,23 +308,9 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 #endif
 			setsockopt(sock[new_idx].fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 #endif
-#endif
 
 			if(sock[new_idx].fd < 0)
 			{
-#if PLATFORM_OPL1000
-				/* Do not enter the restart path on transient accept behaviour.  The
-				 * OPL1000 socket layer/browser interaction can report short-lived
-				 * errors while clients are opening/closing speculative connections.
-				 */
-				if(errno != EWOULDBLOCK)
-				{
-						ADDLOG_ERROR(LOG_FEATURE_HTTP, "accept failed err %i", errno);
-				}
-				sock[new_idx].fd = INVALID_SOCK;
-				rtos_delay_milliseconds(50);
-				continue;
-#else
 				switch(errno)
 				{
 					//case EAGAIN:
@@ -445,23 +320,11 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 						ADDLOG_ERROR(LOG_FEATURE_HTTP, "[sock=%d]: Error when accepting connection, err: %i", sock[new_idx].fd, errno);
 						break;
 				}
-#endif
 			}
 			else
 			{
-#if PLATFORM_OPL1000
-#if LWIP_SO_RCVTIMEO
-#if LWIP_SO_SNDRCVTIMEO_NONSTANDARD
-				int tv = 3 * 1000;
-#else
-				struct timeval tv;
-				tv.tv_sec = 3;
-				tv.tv_usec = 0;
-#endif
-				setsockopt(sock[new_idx].fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-#endif
-				tcp_client_process_sync(&sock[new_idx]);
-#else
+				//ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP, "[sock=%d]: Connection accepted from IP:%s", sock[new_idx].fd, get_clientaddr(&source_addr));
+
 				rtos_delay_milliseconds(20);
 				if(kNoErr != rtos_create_thread(&sock[new_idx].thread,
 					BEKEN_APPLICATION_PRIORITY,
@@ -475,7 +338,6 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 					sock[new_idx].fd = INVALID_SOCK;
 					goto error;
 				}
-#endif
 			}
 		}
 		rtos_delay_milliseconds(10);
@@ -501,21 +363,12 @@ error:
 			sock[i].fd = INVALID_SOCK;
 		}
 	}
-#if PLATFORM_OPL1000
-	/* Do not create a restart loop on OPL1000.  A real fatal listener error should
-	 * leave a clear log and stop the HTTP task rather than eating heap/stack until
-	 * the watchdog resets the chip.
-	 */
-	g_http_thread = NULL;
-	rtos_delete_thread(NULL);
-#else
 	rtos_delay_milliseconds(2000);
 	rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,
 		"TCP Restart",
 		(beken_thread_function_t)restart_tcp_server,
 		2048,
 		(beken_thread_arg_t)0);
-#endif
 }
 
 void HTTPServer_Start()
@@ -530,11 +383,7 @@ void HTTPServer_Start()
 	err = rtos_create_thread(&g_http_thread, BEKEN_APPLICATION_PRIORITY,
 		"TCP_server",
 		(beken_thread_function_t)tcp_server_thread,
-#if PLATFORM_OPL1000
-		0xC00,
-#else
 		0x800,
-#endif
 		(beken_thread_arg_t)0);
 	if(err != kNoErr)
 	{

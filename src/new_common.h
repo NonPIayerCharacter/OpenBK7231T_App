@@ -1135,7 +1135,16 @@ void* pvPortRealloc_obk(void* ptr, size_t size);
 #define lwip_close_force(x) lwip_close(x)
 #define kNoErr 0
 typedef void* beken_thread_arg_t;
-typedef TaskHandle_t beken_thread_t;
+//typedef TaskHandle_t beken_thread_t;
+typedef struct beken_thread_internal
+{
+	TaskHandle_t   handle;
+	StackType_t* stack;
+	StaticTask_t* tcb;
+	struct beken_thread_internal* next;
+} beken_thread_internal_t;
+
+typedef beken_thread_internal_t* beken_thread_t;
 typedef void (*beken_thread_function_t)(beken_thread_arg_t arg);
 typedef int OSStatus;
 

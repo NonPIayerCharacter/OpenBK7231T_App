@@ -1126,6 +1126,7 @@ extern uint32_t __end__[];
 
 
 static HeapRegion_t xHeapRegions[] = {
+    {0x00400f1c, 0x00402768 - 0x00400f1c},
     {0, 0},
     {0x80000400, 0x3C00},
     {NULL, 0},
@@ -1133,8 +1134,8 @@ static HeapRegion_t xHeapRegions[] = {
 
 void vPortInitialiseBlocks_obk(void)
 {
-    xHeapRegions[0].pucStartAddress = &__end__;
-    xHeapRegions[0].xSizeInBytes = 0x440000 - (uint32_t)(&__end__);
+    xHeapRegions[1].pucStartAddress = &__end__;
+    xHeapRegions[1].xSizeInBytes = 0x440000 - (uint32_t)(&__end__);
     vPortDefineHeapRegions_5(xHeapRegions);
 }
 

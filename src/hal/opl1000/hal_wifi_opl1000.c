@@ -673,7 +673,7 @@ void HAL_ConnectToWiFi(const char *oob_ssid, const char *connect_key, obkStaticI
     wifiConfig.sta_config.ssid_length = strlen(g_ssid);
     wifiConfig.sta_config.password_length = strlen(g_password);
     wifiConfig.sta_config.bssid_present = 0;
-    wifiConfig.sta_config.scan_method = WIFI_ALL_CHANNEL_SCAN;
+    wifiConfig.sta_config.scan_method = WIFI_FAST_SCAN;
     wifiConfig.sta_config.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
     wifiConfig.sta_config.threshold.authmode = WIFI_AUTH_OPEN;
     wifiConfig.sta_config.threshold.rssi = -127;
