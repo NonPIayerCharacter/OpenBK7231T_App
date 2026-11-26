@@ -43,6 +43,7 @@ Although this repository is named `OpenBK7231T_App`, it has evolved into a multi
 -   BL616/BL618 (eg Ai-M62-12F, Ai-M61-32S)
 -   GD32VW553 (eg GD32VW553-MINI, GD32VW553-UNIFI)
 -   RTL8196C (Realtek MIPS router SoC with SDRAM, as found in many cheap home routers, eg Cyfrowy Polsat LT-6408n; WiFi AP/STA and Ethernet, OTA via web/TCP, runs with LittleFS, FTP and SMB drivers, see [development thread](https://www.elektroda.com/rtvforum/topic4179473.html) and [router teardown and bootloader analysis](https://www.elektroda.com/rtvforum/topic4173841.html))
+-   MT7687/MT7697 (eg HLK-RM58S, Skylab WU106)
 
 Please use automatically compiled binaries from the Releases tab. To build OpenBeken yourself for any supported platform, fork our version of the submodule SDK first, and then check out this app repository alongside it. Details further down. Alternatively consider using the easier [override method.](https://www.elektroda.com/rtvforum/topic4082682.html)
 
@@ -143,7 +144,7 @@ OpenBeken supports [online builds](https://www.elektroda.com/rtvforum/viewtopic.
 
 # Flashing
 
-See our [GUI easy flash tool](https://github.com/openshwprojects/BK7231GUIFlashTool) for BK7231N, BK7231T, BK7231M, BK7231U, BK7236, BK7238, BK7239N, BK7252N, BK7252U, BL602, BL616, ECR6600, ESP32 (and variants), ESP8266, GD32VW553, LN882H, LN8825, RDA5981, RTL8710B, RTL87x0C, RTL8720D, RTL87x1DA, RTL87x0E, TR6260, W800, W600 (write-only), XR806, XR809, XR872. Also see [FLASHING.md](https://github.com/openshwprojects/OpenBK7231T_App/blob/main/FLASHING.md)
+See our [GUI easy flash tool](https://github.com/openshwprojects/BK7231GUIFlashTool) for BK7231N, BK7231T, BK7231M, BK7231U, BK7236, BK7238, BK7239N, BK7252N, BK7252U, BL602, BL616, ECR6600, ESP32 (and variants), ESP8266, GD32VW553, LN882H, LN8825, MT7687, MT7697, OPL1000A2, RDA5981, RTL8710B, RTL87x0C, RTL8720D, RTL87x1DA, RTL87x0E, TR6260, W800, W600 (write-only), XR806, XR809, XR872. Also see [FLASHING.md](https://github.com/openshwprojects/OpenBK7231T_App/blob/main/FLASHING.md)
 
 Repository of flash tools for [all other supported platforms](https://github.com/openshwprojects/FlashTools/tree/main)
 

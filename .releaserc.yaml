@@ -110,6 +110,7 @@ generateNotes:
         - RDA5981 (eg RDA5981AM, RDA5981BM, WRD2L, TYWRD3S, HLK-M50)
         - LN8825B (eg SCW-T503)
         - GD32VW553 (eg GD32VW553-MINI, GD32VW553-UNIFI)
+        - MT7687/MT7697 (eg HLK-RM58S, Skylab WU106)
 
       footerPartial: |
         {{#if noteGroups}}
@@ -206,8 +207,10 @@ generateNotes:
         | TXW81X         |            | [OpenTXW81X_{{version}}.bin]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenTXW81X_{{version}}.bin)                           |
         | LN8825B        | UART Flash | [OpenLN8825_{{version}}.bin]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenLN8825_{{version}}.bin)                           |
         | LN8825B        | OTA Update | [OpenLN8825_{{version}}_ota.img]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenLN8825_{{version}}_ota.img)                   |
-        | GD32VW553      | UART Flash | [OpenGD32VW553_{{version}}.bin]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenGD32VW553_{{version}}.bin)                       |
-        | GD32VW553      | OTA Update | [OpenGD32VW553_{{version}}_ota.img]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenGD32VW553_{{version}}_ota.img)               |
+        | GD32VW553      | UART Flash | [OpenGD32VW553_{{version}}.bin]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenGD32VW553_{{version}}.bin)                     |
+        | GD32VW553      | OTA Update | [OpenGD32VW553_{{version}}_ota.img]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenGD32VW553_{{version}}_ota.img)             |
+        | MT7687/MT7697  | UART Flash | [OpenMT7687_{{version}}.bin]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenMT7687_{{version}}.bin)                           |
+        | MT7687/MT7697  | OTA Update | [OpenMT7687_{{version}}_ota.img]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/OpenMT7687_{{version}}_ota.img)                   |
         | Win32          |            | [obkSimulator_{{version}}.zip]({{host}}/{{owner}}/{{repository}}/releases/download/{{version}}/obkSimulator_{{version}}.zip)                       |
 
 
@@ -279,6 +282,7 @@ publish:
       - path: "output/**/OpenGD32*"
       - path: "output/**/OpenTXW*"
       - path: "output/**/OpenRDA*"
+      - path: "output/**/OpenMT76*"
       - path: "output/**/obkSimulator*"
 
 success:

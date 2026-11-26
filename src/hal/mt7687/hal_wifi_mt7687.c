@@ -19,7 +19,7 @@
 extern struct netif sta_if, ap_if;
 extern uint8_t g_mac[6];
 static void (*g_wifiStatusCallback)(int code);
-static int g_bAccessPointMode = 0;
+bool g_bAccessPointMode = false;
 static bool g_events_registered = false;
 static char g_ipStr[16] = "unknown";
 static char g_gwStr[16] = "unknown";
@@ -128,7 +128,7 @@ void HAL_ConnectToWiFi(const char* ssid, const char* pwd, obkStaticIP_t* ip)
 	{
 		g_wifiStatusCallback(WIFI_STA_CONNECTING);
 	}
-	g_bAccessPointMode = 0;
+	g_bAccessPointMode = false;
 	netif_set_default(&sta_if);
 	netif_set_link_down(&ap_if);
 	wifi_connection_register_event_handler(WIFI_EVENT_IOT_CONNECTED, sta_evt);
@@ -151,7 +151,7 @@ void HAL_DisconnectFromWifi()
 
 int HAL_SetupWiFiOpenAccessPoint(const char* ssid)
 {
-	g_bAccessPointMode = 1;
+	g_bAccessPointMode = true;
 
 	wifi_config_set_security_mode(WIFI_PORT_AP, WIFI_AUTH_MODE_OPEN, WIFI_ENCRYPT_TYPE_WEP_DISABLED);
 	wifi_config_set_opmode(WIFI_MODE_AP_ONLY);
@@ -187,7 +187,7 @@ void HAL_PrintNetworkInfo()
 	uint8_t mac[6];
 	WiFI_GetMacAddress((char*)mac);
 	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "+--------------- net device info ------------+");
-	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "|netif type    : %-16s            |", g_bAccessPointMode == 0 ? "STA" : "AP");
+	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "|netif type    : %-16s            |", g_bAccessPointMode == false ? "STA" : "AP");
 	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "|netif rssi    = %-16i            |", HAL_GetWifiStrength());
 	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "|netif ip      = %-16s            |", HAL_GetMyIPString());
 	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "|netif mask    = %-16s            |", HAL_GetMyMaskString());

@@ -373,6 +373,18 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 		bk_wifi_ps_cmd_close();
 		//bk_wifi_send_sleep_mode_req(0);
 	}
+#elif PLATFORM_MT7687
+	if(bOn)
+	{
+		wifi_config_set_power_save_mode(2);
+		if(bOn > 1) wifi_config_set_dtim_interval(10); // dtim 10
+		else wifi_config_set_dtim_interval(1);
+	}
+	else
+	{
+		wifi_config_set_power_save_mode(0);
+		wifi_config_set_dtim_interval(1);
+	}
 #else
 	ADDLOG_INFO(LOG_FEATURE_CMD, "PowerSave is not implemented on this platform");
 #endif

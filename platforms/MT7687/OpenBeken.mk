@@ -7,6 +7,7 @@ C_FILES  += $(SOURCE_DIR)/../libraries/mqtt_patched.c
 C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_flashConfig_mt7687.c
 C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_flashVars_mt7687.c
 C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_generic_mt7687.c
+C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_hwtimer_mt7687.c
 C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_main_mt7687.c
 C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_ota_mt7687.c
 C_FILES  += $(SOURCE_DIR)/../src/hal/mt7687/hal_pins_mt7687.c
